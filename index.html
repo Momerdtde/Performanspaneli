@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performans Paneli</title>
+    
+    <meta name="theme-color" content="#1e293b">
+    <meta name="description" content="Öğretmenler için Öğrenci Performans Değerlendirme Paneli">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .cool-title { font-family: 'Exo 2', sans-serif; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .teacher-info, .confirm-modal { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        input[type='number']::-webkit-inner-spin-button, 
+        input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type='number'] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-slate-900">
+    <div id="root"></div>
+    
+    <script type="text/babel" data-presets="react">
+        const { useState, useEffect, Fragment } = React;
+
+        // İkonlar
+        const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const MinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const UploadCloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>;
+        const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const NoteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+        const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+        const ClassesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>;
+        const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
+        const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+        const UndoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v6h6"/><path d="M21 13a9 9 0 1 1-4.53-7.83"/></svg>;
+
+        function App() {
+            const [activeView, setActiveView] = useState('classes');
+            const [classes, setClasses] = useState([]);
+            const [activeClassId, setActiveClassId] = useState(null);
+            const [editingNoteStudent, setEditingNoteStudent] = useState(null);
+            const [classToDelete, setClassToDelete] = useState(null);
+            const [studentToDelete, setStudentToDelete] = useState(null);
+            const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+            const [lastAction, setLastAction] = useState(null);
+            const [undoMessage, setUndoMessage] = useState('');
+            const [settings, setSettings] = useState({
+                teacherName: '', schoolName: '', branchName: '',
+                inClassPlus: 2, inClassMinus: -1, homeworkPlus: 5, homeworkMinus: -3, baseScore: 70
+            });
+            const [tempSettings, setTempSettings] = useState(settings);
+            const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+            const [newClassName, setNewClassName] = useState('');
+            const [newStudentName, setNewStudentName] = useState('');
+            const [importText, setImportText] = useState('');
+            
+            useEffect(() => {
+                try {
+                    const savedData = localStorage.getItem('teacherPerformanceApp');
+                    if (savedData) {
+                        const data = JSON.parse(savedData);
+                        if(data.classes) setClasses(data.classes);
+                        if(data.settings) { setSettings(data.settings); setTempSettings(data.settings); }
+                    }
+                } catch (error) { console.error("Veri yüklenirken hata oluştu:", error); }
+            }, []);
+
+            useEffect(() => {
+                try { localStorage.setItem('teacherPerformanceApp', JSON.stringify({ classes, settings })); } 
+                catch (error) { console.error("Veri kaydedilirken hata oluştu:", error); }
+            }, [classes, settings]);
+
+            useEffect(() => { if (activeView === 'settings') { setTempSettings(settings); } }, [activeView, settings]);
+
+            const activeClass = classes.find(c => c.id === activeClassId);
+            
+            const handleSaveSettings = () => {
+                setSettings(tempSettings);
+                setShowSaveConfirmation(true);
+                setTimeout(() => setShowSaveConfirmation(false), 2000);
+            };
+
+            const handleTempSettingsChange = (e) => {
+                const { name, value } = e.target;
+                const isNumeric = ['inClassPlus', 'inClassMinus', 'homeworkPlus', 'homeworkMinus', 'baseScore'].includes(name);
+                setTempSettings(prev => ({ ...prev, [name]: isNumeric ? Number(value) : value }));
+            };
+
+            const handleAddClass = () => {
+                if (newClassName.trim() === '') return;
+                const newClass = { id: Date.now(), name: newClassName.trim(), students: [] };
+                setClasses(prev => [...prev, newClass]);
+                setActiveClassId(newClass.id);
+                setNewClassName('');
+            };
+            
+            const confirmDeleteClass = (classId) => {
+                const updatedClasses = classes.filter(c => c.id !== classId);
+                setClasses(updatedClasses);
+                if (activeClassId === classId) { setActiveClassId(updatedClasses.length > 0 ? updatedClasses[0].id : null); }
+                setClassToDelete(null);
+            };
+
+            const handleAddStudent = () => {
+                if (newStudentName.trim() === '' || !activeClassId) return;
+                const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 } };
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent] } : c));
+                setNewStudentName('');
+            };
+
+            const handleDeleteStudent = (studentId) => {
+                if (!activeClassId) return;
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c ));
+                setStudentToDelete(null);
+            };
+            
+            const handleImport = () => {
+                if (!activeClassId) return;
+                const names = importText.split('\n').filter(name => name.trim() !== '');
+                const newStudents = names.map((name, index) => ({ id: Date.now() + index, name: name.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 } }));
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, ...newStudents] } : c ));
+                setImportText('');
+            };
+
+            const handleManualScoreChange = (studentId, scoreType, value) => {
+                const newScore = parseInt(value, 10);
+                const scoreToSet = (value === '' || isNaN(newScore)) ? 0 : Math.max(0, newScore);
+                setClasses(prev => prev.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return { ...c, students: c.students.map(s => 
+                        s.id === studentId ? { ...s, scores: { ...s.scores, [scoreType]: scoreToSet } } : s
+                    )};
+                }));
+            };
+
+            const updateStudentScore = (studentId, scoreType) => {
+                setUndoMessage(''); 
+                setLastAction({ studentId, scoreType, classId: activeClassId }); 
+
+                setClasses(prev => prev.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return { ...c, students: c.students.map(s => {
+                        if (s.id === studentId) {
+                            const currentScore = s.scores[scoreType];
+                            const newScore = currentScore + 1;
+                            return { ...s, scores: { ...s.scores, [scoreType]: Math.max(0, newScore) } };
+                        }
+                        return s;
+                    })};
+                }));
+            };
+
+            const handleSaveNote = (studentId, newNote) => {
+                setClasses(prev => prev.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return { ...c, students: c.students.map(s => s.id === studentId ? { ...s, notes: newNote } : s )};
+                }));
+                setEditingNoteStudent(null);
+            };
+
+            const calculateGrade = (student) => {
+                if (!student) return 0;
+                const score = settings.baseScore + (student.scores.inClassPlus * settings.inClassPlus) + (student.scores.inClassMinus * settings.inClassMinus) + (student.scores.homeworkPlus * settings.homeworkPlus) + (student.scores.homeworkMinus * settings.homeworkMinus);
+                return Math.max(0, Math.min(100, score));
+            };
+
+            const handleUndoLastAction = () => {
+                if (!lastAction) return;
+                const { studentId, scoreType, classId } = lastAction;
+                let studentName = '';
+                setClasses(prev => prev.map(c => {
+                    if (c.id !== classId) return c;
+                    return { ...c, students: c.students.map(s => {
+                        if (s.id === studentId && s.scores[scoreType] > 0) {
+                            studentName = s.name;
+                            return { ...s, scores: { ...s.scores, [scoreType]: s.scores[scoreType] - 1 } };
+                        }
+                        return s;
+                    })};
+                }));
+                setUndoMessage(`${studentName} isimli öğrencinin son puanı geri alındı.`);
+                setLastAction(null);
+                setTimeout(() => setUndoMessage(''), 3000);
+            };
+
+            const handleGeneratePdf = () => {
+                if (!activeClass || typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
+                    alert("PDF oluşturulamadı. Lütfen tekrar deneyin.");
+                    return;
+                }
+                setIsGeneratingPdf(true);
+                
+                const studentRows = activeClass.students.map(student => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">${student.name}</td>
+                        <td style="text-align: center; padding: 8px; font-weight: bold; font-size: 14px;">${calculateGrade(student)}</td>
+                    </tr>
+                `).join('');
+
+                const reportHTML = `
+                    <div style="position: relative; width: 100%; height: 100%; padding: 40px; color: black; font-family: sans-serif; box-sizing: border-box;">
+                        <div style="text-align: center;">
+                            <h1 style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin: 0; padding-bottom:10px;">${settings.schoolName || 'OKUL ADI'}</h1>
+                            <h2 style="font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px;">${activeClass.name} Performans Raporu</h2>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                            <thead><tr style="border-bottom: 2px solid #333;"><th style="text-align: left; padding: 8px; width: 75%;">Öğrenci Adı</th><th style="text-align: center; padding: 8px; width: 25%;">Sözlü Notu</th></tr></thead>
+                            <tbody>${studentRows}</tbody>
+                        </table>
+                        <div style="position: absolute; bottom: 40px; right: 40px; text-align: right; font-size: 12px;">
+                            <p style="margin-bottom: 5px; font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'}</p>
+                            <p style="margin: 0;">${settings.branchName || 'Branş'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                const reportContainer = document.createElement('div');
+                reportContainer.style.position = 'absolute';
+                reportContainer.style.left = '-9999px';
+                reportContainer.style.width = '210mm';
+                reportContainer.style.height = '297mm';
+                reportContainer.style.backgroundColor = 'white';
+                reportContainer.innerHTML = reportHTML;
+                document.body.appendChild(reportContainer);
+                
+                window.html2canvas(reportContainer, { scale: 2, useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                    pdf.save(`${activeClass.name} - Performans Raporu.pdf`);
+                    
+                    document.body.removeChild(reportContainer);
+                    setIsGeneratingPdf(false);
+                }).catch(err => {
+                    console.error("PDF oluşturma hatası:", err);
+                    document.body.removeChild(reportContainer);
+                    setIsGeneratingPdf(false);
+                });
+            };
+            
+            const NoteModal = ({ student, onSave, onClose }) => {
+                const [note, setNote] = useState(student.notes);
+                useEffect(() => {
+                    const handleEsc = (event) => { if (event.keyCode === 27) onClose(); };
+                    window.addEventListener('keydown', handleEsc);
+                    return () => window.removeEventListener('keydown', handleEsc);
+                }, [onClose]);
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal">
+                        <div className="bg-slate-800 rounded-lg p-6 shadow-xl border border-slate-700 w-full max-w-lg mx-4">
+                            <h3 className="text-xl font-bold text-white mb-4">Notlar: <span className="text-blue-400">{student.name}</span></h3>
+                            <textarea value={note} onChange={(e) => setNote(e.target.value)} className="w-full h-48 p-3 bg-slate-700 border border-slate-600 rounded-md mb-4 text-white placeholder:text-slate-500" placeholder="Öğrenci ile ilgili notlarınızı buraya yazın..."></textarea>
+                            <div className="flex justify-end gap-4">
+                                <button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Kapat</button>
+                                <button onClick={() => onSave(student.id, note)} className="py-2 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+            
+            const handleFocus = (event) => {
+                event.target.type = 'text';
+                event.target.select();
+            };
+
+            const handleBlur = (event) => {
+                event.target.type = 'number';
+            };
+
+            return (
+                <Fragment>
+                    <div className="max-w-7xl mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-4 sm:p-6 text-white pb-32">
+                        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div>
+                                <h1 className="cool-title text-4xl font-bold">Performans Paneli</h1>
+                                {settings.teacherName && (
+                                    <div className="teacher-info mt-2 text-slate-400 text-sm">
+                                        <span>{settings.teacherName}</span><span className="mx-2">|</span><span>{settings.branchName}</span><span className="mx-2">|</span><span>{settings.schoolName}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-2 self-start sm:self-center">
+                                <button onClick={() => setActiveView('classes')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <ClassesIcon /> Sınıflar </button>
+                                <button onClick={() => setActiveView('settings')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <SettingsIcon /> Ayarlar </button>
+                            </div>
+                        </div>
+                        {activeView === 'settings' && (
+                           <div className="confirm-modal">
+                                <h2 className="text-2xl font-bold text-slate-100 mb-4">Genel Ayarlar</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900/50 p-6 rounded-lg border border-slate-700">
+                                    <div className="flex flex-col gap-4">
+                                        <h3 className="font-bold text-lg text-blue-400 border-b border-slate-600 pb-2">Öğretmen Bilgileri</h3>
+                                        <div><label className="block text-sm font-medium text-slate-400">Ad Soyad</label><input type="text" name="teacherName" value={tempSettings.teacherName} onChange={handleTempSettingsChange} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                        <div><label className="block text-sm font-medium text-slate-400">Okul Adı</label><input type="text" name="schoolName" value={tempSettings.schoolName} onChange={handleTempSettingsChange} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                        <div><label className="block text-sm font-medium text-slate-400">Branş</label><input type="text" name="branchName" value={tempSettings.branchName} onChange={handleTempSettingsChange} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                    </div>
+                                    <div className="flex flex-col gap-4">
+                                        <h3 className="font-bold text-lg text-blue-400 border-b border-slate-600 pb-2">Puan Değerleri</h3>
+                                        <div><label className="block text-sm font-medium text-slate-400">Sınıf İçi Artı (+)</label><input type="number" name="inClassPlus" value={tempSettings.inClassPlus} onChange={handleTempSettingsChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                        <div><label className="block text-sm font-medium text-slate-400">Sınıf İçi Eksi (-)</label><input type="number" name="inClassMinus" value={tempSettings.inClassMinus} onChange={handleTempSettingsChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                        <div><label className="block text-sm font-medium text-slate-400">Ödev Artısı (+)</label><input type="number" name="homeworkPlus" value={tempSettings.homeworkPlus} onChange={handleTempSettingsChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                        <div><label className="block text-sm font-medium text-slate-400">Ödev Eksisi (-)</label><input type="number" name="homeworkMinus" value={tempSettings.homeworkMinus} onChange={handleTempSettingsChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                    </div>
+                                    <div className="flex flex-col gap-4">
+                                        <h3 className="font-bold text-lg text-blue-400 border-b border-slate-600 pb-2">Sözlü Notu</h3>
+                                        <div><label className="block text-sm font-medium text-slate-400">Başlangıç Notu</label><input type="number" name="baseScore" value={tempSettings.baseScore} onChange={handleTempSettingsChange} onFocus={handleFocus} onBlur={handleBlur} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/></div>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-end items-center gap-4">
+                                    {showSaveConfirmation && <span className="text-green-400 teacher-info">Kaydedildi!</span>}
+                                    <button onClick={handleSaveSettings} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"><SaveIcon /> Ayarları Kaydet</button>
+                                </div>
+                            </div>
+                        )}
+                        {activeView === 'classes' && (
+                            <div>
+                                <div className="mb-8">
+                                    <h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Yönetimi</h2>
+                                    <div className="flex gap-2 mb-4"><input type="text" value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="Yeni Sınıf Adı (örn: 11-B)" className="flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/> <button onClick={handleAddClass} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Ekle</button></div>
+                                    {classes.length > 0 && <div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-2">{classes.map(c => <div key={c.id} className="relative"><button onClick={() => setActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name}</button><button onClick={() => setClassToDelete(c)} className="absolute -top-2 -right-2 bg-red-500/80 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600">X</button></div>)}</div>}
+                                </div>
+                                {activeClass ? (
+                                    activeClass.students.length === 0 ? (
+                                        <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-6">
+                                            <h2 className="text-xl font-bold mb-2 text-white">Öğrenci Listesini Aktar ({activeClass.name})</h2>
+                                            <textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder={"1. Ali Yılmaz\n2. Ayşe Kaya..."} className="w-full h-32 p-3 bg-slate-700 border border-slate-600 rounded-md mb-4 text-white"/>
+                                            <button onClick={handleImport} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700"><UploadCloudIcon /> Listeyi Oluştur</button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="hidden md:grid grid-cols-12 gap-4 font-bold text-slate-400 p-2 border-b-2 border-slate-700 mb-2">
+                                                <div className="col-span-4">Öğrenci Adı</div>
+                                                <div className="col-span-3 text-center">Sınıf İçi</div>
+                                                <div className="col-span-3 text-center">Ödev</div>
+                                                <div className="col-span-1 text-center">Notlar</div>
+                                                <div className="col-span-1 text-center">Sözlü Notu</div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {activeClass.students.map(student => (
+                                                    <div key={student.id} className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/50">
+                                                        <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0">
+                                                            <button onClick={() => setStudentToDelete(student)} className="p-1 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"><TrashIcon/></button>
+                                                            {student.name}
+                                                        </div>
+                                                        <div className="flex flex-col gap-2 md:col-span-6 md:grid md:grid-cols-2 md:gap-4">
+                                                            <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center">
+                                                                <span className="font-bold text-slate-400 md:hidden">Sınıf İçi:</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button onClick={() => updateStudentScore(student.id, 'inClassPlus')} className="p-1.5 bg-green-500/20 text-green-300 rounded-full"><PlusIcon/></button>
+                                                                    <input type="number" value={student.scores.inClassPlus} onFocus={handleFocus} onBlur={handleBlur} onChange={(e) => handleManualScoreChange(student.id, 'inClassPlus', e.target.value)} className="w-12 text-center bg-slate-700 rounded-md font-semibold text-green-400"/>
+                                                                    <input type="number" value={student.scores.inClassMinus} onFocus={handleFocus} onBlur={handleBlur} onChange={(e) => handleManualScoreChange(student.id, 'inClassMinus', e.target.value)} className="w-12 text-center bg-slate-700 rounded-md font-semibold text-red-400"/>
+                                                                    <button onClick={() => updateStudentScore(student.id, 'inClassMinus')} className="p-1.5 bg-red-500/20 text-red-300 rounded-full"><MinusIcon/></button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center">
+                                                                <span className="font-bold text-slate-400 md:hidden">Ödev:</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button onClick={() => updateStudentScore(student.id, 'homeworkPlus')} className="p-1.5 bg-sky-500/20 text-sky-300 rounded-full"><PlusIcon/></button>
+                                                                    <input type="number" value={student.scores.homeworkPlus} onFocus={handleFocus} onBlur={handleBlur} onChange={(e) => handleManualScoreChange(student.id, 'homeworkPlus', e.target.value)} className="w-12 text-center bg-slate-700 rounded-md font-semibold text-sky-400"/>
+                                                                    <input type="number" value={student.scores.homeworkMinus} onFocus={handleFocus} onBlur={handleBlur} onChange={(e) => handleManualScoreChange(student.id, 'homeworkMinus', e.target.value)} className="w-12 text-center bg-slate-700 rounded-md font-semibold text-orange-400"/>
+                                                                    <button onClick={() => updateStudentScore(student.id, 'homeworkMinus')} className="p-1.5 bg-orange-500/20 text-orange-300 rounded-full"><MinusIcon/></button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:col-span-1 md:justify-center">
+                                                             <span className="font-bold text-slate-400 md:hidden">Notlar:</span>
+                                                            <button onClick={() => setEditingNoteStudent(student)} className="p-2 text-slate-400 hover:text-white"><NoteIcon/></button>
+                                                        </div>
+                                                        <div className="flex justify-between items-center pt-3 mt-2 border-t border-blue-500/20 md:border-none md:p-0 md:col-span-1 md:justify-center">
+                                                            <span className="font-bold text-slate-400 md:hidden">Sözlü Notu:</span>
+                                                            <div className="text-center font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">{calculateGrade(student)}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="mt-10 pt-6 border-t-2 border-slate-700">
+                                                <h3 className="text-xl font-bold text-slate-100 mb-4">Öğrenci Yönetimi ({activeClass.name})</h3>
+                                                <div className="flex gap-2">
+                                                    <input type="text" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} placeholder="Yeni Öğrenci Adı Soyadı" className="flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/>
+                                                    <button onClick={handleAddStudent} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">Ekle</button>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap justify-end items-center mt-8 gap-4">
+                                                {undoMessage && <span className="text-green-400 teacher-info w-full text-right sm:w-auto">{undoMessage}</span>}
+                                                <button onClick={handleUndoLastAction} disabled={!lastAction} className="flex items-center justify-center gap-2 bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed">
+                                                    <UndoIcon/> Geri Al
+                                                </button>
+                                                <button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors disabled:bg-slate-500 disabled:cursor-wait">
+                                                    <DownloadIcon/> {isGeneratingPdf ? 'Oluşturuluyor...' : 'Raporu İndir (PDF)'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                ) : <div className="text-center py-10"><h2 className="text-2xl font-bold text-slate-300">Hoş Geldiniz!</h2><p className="text-slate-400">Başlamak için bir sınıf ekleyin veya Ayarlar menüsünü düzenleyin.</p></div>}
+                            </div>
+                        )}
+                    </div>
+                    {classToDelete && (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal"><div className="bg-slate-800 rounded-lg p-8 shadow-xl border border-slate-700 mx-4"><h3 className="text-xl font-bold text-white mb-4">Sınıfı Silme Onayı</h3><p className="text-slate-300 mb-6">"<span className="font-bold">{classToDelete.name}</span>" sınıfını ve tüm verileri <br/> kalıcı olarak silmek istediğinizden emin misiniz?</p><div className="flex justify-end gap-4"><button onClick={() => setClassToDelete(null)} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Hayır, Vazgeç</button><button onClick={() => confirmDeleteClass(classToDelete.id)} className="py-2 px-5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Evet, Sil</button></div></div></div>)}
+                    {studentToDelete && (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal"><div className="bg-slate-800 rounded-lg p-8 shadow-xl border border-slate-700 mx-4"><h3 className="text-xl font-bold text-white mb-4">Öğrenci Silme Onayı</h3><p className="text-slate-300 mb-6">"<span className="font-bold">{studentToDelete.name}</span>" isimli öğrenciyi <br/> kalıcı olarak silmek istediğinizden emin misiniz?</p><div className="flex justify-end gap-4"><button onClick={() => setStudentToDelete(null)} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Hayır, Vazgeç</button><button onClick={() => handleDeleteStudent(studentToDelete.id)} className="py-2 px-5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Evet, Sil</button></div></div></div>)}
+                    {editingNoteStudent && <NoteModal student={editingNoteStudent} onSave={handleSaveNote} onClose={() => setEditingNoteStudent(null)} />}
+                </Fragment>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
