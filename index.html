@@ -14,26 +14,78 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Firebase Kütüphaneleri -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .cool-title { font-family: 'Exo 2', sans-serif; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .teacher-info, .confirm-modal { animation: fadeIn 0.5s ease-in-out; }
+        .teacher-info, .confirm-modal, .auth-form { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         input[type='number']::-webkit-inner-spin-button, 
         input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type='number'] { -moz-appearance: textfield; }
+        .pdf-page-break { page-break-after: always; }
     </style>
 </head>
-<body class="bg-slate-900">
-    <div id="root"></div>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen p-4">
+    <div id="root" class="w-full max-w-7xl"></div>
     
     <script type="text/babel" data-presets="react">
         const { useState, useEffect, Fragment } = React;
+        
+        // Firebase yapılandırması
+        const firebaseConfig = {
+            apiKey: "AIzaSyBn2f7sG_tb4AoCtx0AR1d3rw9OfhiW0Hc",
+            authDomain: "performanspaneli.firebaseapp.com",
+            projectId: "performanspaneli",
+            storageBucket: "performanspaneli.appspot.com", 
+            messagingSenderId: "884074936264",
+            appId: "1:884074936264:web:0645577f7c66fecce8f2fd",
+            measurementId: "G-4P30W8GEYJ"
+        };
 
-        // İkonlar
+        // Firebase'i başlat
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            firebase.analytics();
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- Raporlama için Değerlendirme Kriterleri ---
+        const IN_CLASS_CRITERIA = {
+            derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 },
+            derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 },
+            arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 },
+            ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 },
+            soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 },
+            elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 },
+            uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 },
+            turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 },
+            on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 },
+            odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 }
+        };
+
+        const PERFORMANCE_TASK_CRITERIA = {
+            ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 },
+            plan_yapma: { label: 'Ödeve uygun plan yapma ve uygulama', max: 5 },
+            bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 },
+            kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 },
+            sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 },
+            materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 },
+            anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 },
+            kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 },
+            zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 }
+        };
+
+        // İkonlar (Değişiklik yok)
         const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
         const MinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
         const UploadCloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>;
@@ -44,8 +96,61 @@
         const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
         const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const UndoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v6h6"/><path d="M21 13a9 9 0 1 1-4.53-7.83"/></svg>;
+        const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
 
-        function App() {
+        // Kimlik Doğrulama Ekranı (Değişiklik yok)
+        function AuthScreen() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLogin, setIsLogin] = useState(true);
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                if (isLogin) {
+                    auth.signInWithEmailAndPassword(email, password)
+                        .catch(err => setError(err.message))
+                        .finally(() => setLoading(false));
+                } else {
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .catch(err => setError(err.message))
+                        .finally(() => setLoading(false));
+                }
+            };
+
+            return (
+                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-8 text-white w-full max-w-md mx-auto auth-form">
+                    <h1 className="cool-title text-4xl font-bold text-center mb-8">Performans Paneli</h1>
+                    <h2 className="text-2xl font-bold text-center mb-6">{isLogin ? 'Giriş Yap' : 'Kayıt Ol'}</h2>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400">E-posta Adresi</label>
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400">Şifre</label>
+                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white"/>
+                        </div>
+                        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-slate-500">
+                            {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+                        </button>
+                    </form>
+                    <p className="text-center text-slate-400 mt-6">
+                        {isLogin ? "Hesabınız yok mu? " : "Zaten bir hesabınız var mı? "}
+                        <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-blue-400 hover:underline">
+                            {isLogin ? 'Kayıt Olun' : 'Giriş Yapın'}
+                        </button>
+                    </p>
+                </div>
+            );
+        }
+
+        // Ana Panel
+        function PerformancePanel({ user }) {
             const [activeView, setActiveView] = useState('classes');
             const [classes, setClasses] = useState([]);
             const [activeClassId, setActiveClassId] = useState(null);
@@ -64,24 +169,47 @@
             const [newClassName, setNewClassName] = useState('');
             const [newStudentName, setNewStudentName] = useState('');
             const [importText, setImportText] = useState('');
+            const [isLoading, setIsLoading] = useState(true);
             
+            // Veri yükleme ve dinleme
             useEffect(() => {
-                try {
-                    const savedData = localStorage.getItem('teacherPerformanceApp');
-                    if (savedData) {
-                        const data = JSON.parse(savedData);
-                        if(data.classes) setClasses(data.classes);
-                        if(data.settings) { setSettings(data.settings); setTempSettings(data.settings); }
-                    }
-                } catch (error) { console.error("Veri yüklenirken hata oluştu:", error); }
-            }, []);
+                if (user) {
+                    setIsLoading(true);
+                    const docRef = db.collection('userData').doc(user.uid);
+                    const unsubscribe = docRef.onSnapshot(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if(data.classes) setClasses(data.classes);
+                            if(data.settings) { 
+                                setSettings(data.settings); 
+                                setTempSettings(data.settings); 
+                            }
+                        }
+                        setIsLoading(false);
+                    }, error => {
+                        console.error("Veri dinlenirken hata oluştu:", error);
+                        setIsLoading(false);
+                    });
+                    return () => unsubscribe();
+                }
+            }, [user]);
 
+            // Veri kaydetme
             useEffect(() => {
-                try { localStorage.setItem('teacherPerformanceApp', JSON.stringify({ classes, settings })); } 
-                catch (error) { console.error("Veri kaydedilirken hata oluştu:", error); }
-            }, [classes, settings]);
+                if (!isLoading && user) {
+                    const docRef = db.collection('userData').doc(user.uid);
+                    docRef.set({ classes, settings }, { merge: true })
+                        .catch(error => {
+                            console.error("Veri kaydedilirken hata oluştu:", error);
+                        });
+                }
+            }, [classes, settings, user, isLoading]);
 
             useEffect(() => { if (activeView === 'settings') { setTempSettings(settings); } }, [activeView, settings]);
+            
+            if (isLoading) {
+                 return <div className="text-center text-white text-2xl">Veriler Yükleniyor...</div>;
+            }
 
             const activeClass = classes.find(c => c.id === activeClassId);
             
@@ -170,7 +298,7 @@
             };
 
             const calculateGrade = (student) => {
-                if (!student) return 0;
+                if (!student || !student.scores) return 0;
                 const score = settings.baseScore + (student.scores.inClassPlus * settings.inClassPlus) + (student.scores.inClassMinus * settings.inClassMinus) + (student.scores.homeworkPlus * settings.homeworkPlus) + (student.scores.homeworkMinus * settings.homeworkMinus);
                 return Math.max(0, Math.min(100, score));
             };
@@ -194,13 +322,41 @@
                 setTimeout(() => setUndoMessage(''), 3000);
             };
 
-            const handleGeneratePdf = () => {
-                if (!activeClass || typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
-                    alert("PDF oluşturulamadı. Lütfen tekrar deneyin.");
-                    return;
+            // --- YENİ: Küsuratsız Puan Dağıtma Fonksiyonu ---
+            const distributeScores = (totalScore, criteria) => {
+                const distributed = {};
+                let currentTotal = 0;
+                const scoresWithDiff = Object.entries(criteria).map(([key, { max }]) => {
+                    const rawScore = (totalScore / 100) * max;
+                    const roundedScore = Math.round(rawScore);
+                    currentTotal += roundedScore;
+                    return { key, max, rounded: roundedScore, diff: roundedScore - rawScore };
+                });
+
+                let difference = totalScore - currentTotal;
+                scoresWithDiff.sort((a, b) => a.diff - b.diff);
+
+                while (difference !== 0) {
+                    for (const item of scoresWithDiff) {
+                        if (difference === 0) break;
+                        if (difference > 0 && item.rounded < item.max) {
+                            item.rounded++;
+                            difference--;
+                        } else if (difference < 0 && item.rounded > 0) {
+                            item.rounded--;
+                            difference++;
+                        }
+                    }
                 }
+                scoresWithDiff.forEach(item => { distributed[item.key] = item.rounded; });
+                return distributed;
+            };
+
+            // --- YENİ: Basit Rapor Fonksiyonu ---
+            const handleGenerateSimplePdf = () => {
+                if (!activeClass) return;
                 setIsGeneratingPdf(true);
-                
+
                 const studentRows = activeClass.students.map(student => `
                     <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 8px;">${student.name}</td>
@@ -209,21 +365,20 @@
                 `).join('');
 
                 const reportHTML = `
-                    <div style="position: relative; width: 100%; height: 100%; padding: 40px; color: black; font-family: sans-serif; box-sizing: border-box;">
+                    <div style="padding: 40px; color: black; font-family: sans-serif;">
                         <div style="text-align: center;">
-                            <h1 style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin: 0; padding-bottom:10px;">${settings.schoolName || 'OKUL ADI'}</h1>
-                            <h2 style="font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px;">${activeClass.name} Performans Raporu</h2>
+                            <h1 style="font-size: 24px;">${settings.schoolName || 'OKUL ADI'}</h1>
+                            <h2 style="font-size: 18px;">${activeClass.name} Performans Raporu</h2>
                         </div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                            <thead><tr style="border-bottom: 2px solid #333;"><th style="text-align: left; padding: 8px; width: 75%;">Öğrenci Adı</th><th style="text-align: center; padding: 8px; width: 25%;">Sözlü Notu</th></tr></thead>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 20px;">
+                            <thead><tr style="border-bottom: 2px solid #333;"><th style="text-align: left; padding: 8px;">Öğrenci Adı</th><th style="text-align: center; padding: 8px;">Sözlü Notu</th></tr></thead>
                             <tbody>${studentRows}</tbody>
                         </table>
                         <div style="position: absolute; bottom: 40px; right: 40px; text-align: right; font-size: 12px;">
-                            <p style="margin-bottom: 5px; font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'}</p>
-                            <p style="margin: 0;">${settings.branchName || 'Branş'}</p>
+                            <p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'}</p>
+                            <p>${settings.branchName || 'Branş'}</p>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 
                 const reportContainer = document.createElement('div');
                 reportContainer.style.position = 'absolute';
@@ -238,10 +393,8 @@
                     const imgData = canvas.toDataURL('image/png');
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                    
                     pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-                    pdf.save(`${activeClass.name} - Performans Raporu.pdf`);
-                    
+                    pdf.save(`${activeClass.name} - Basit Rapor.pdf`);
                     document.body.removeChild(reportContainer);
                     setIsGeneratingPdf(false);
                 }).catch(err => {
@@ -249,6 +402,122 @@
                     document.body.removeChild(reportContainer);
                     setIsGeneratingPdf(false);
                 });
+            };
+
+            // --- GÜNCELLENDİ: Detaylı Rapor Fonksiyonu ---
+            const handleGenerateDetailedPdf = () => {
+                if (!activeClass) return;
+                setIsGeneratingPdf(true);
+
+                const reportContainer = document.createElement('div');
+                reportContainer.style.position = 'absolute';
+                reportContainer.style.left = '-9999px';
+                reportContainer.style.width = '210mm';
+                reportContainer.style.backgroundColor = 'white';
+                reportContainer.style.fontFamily = 'sans-serif';
+                reportContainer.style.color = 'black';
+
+                let htmlContent = `
+                    <div style="padding: 20mm; box-sizing: border-box; width: 210mm; height: 297mm;">
+                        <div style="text-align: center; margin-bottom: 10mm;">
+                            <h1 style="font-size: 18px; font-weight: bold; margin: 0;">${settings.schoolName || 'OKUL ADI'}</h1>
+                            <h2 style="font-size: 16px; margin: 5px 0;">${activeClass.name} Sınıfı Performans Raporu</h2>
+                            <p style="font-size: 12px;">${settings.teacherName || 'Öğretmen'} - ${settings.branchName || 'Branş'}</p>
+                        </div>
+                        <h3 style="font-size: 14px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 5mm;">Genel Not Özeti</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                            <thead>
+                                <tr style="background-color: #f2f2f2;">
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Öğrenci Adı</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Sözlü Notu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeClass.students.map(student => `
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 8px;">${student.name}</td>
+                                        <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${calculateGrade(student)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                activeClass.students.forEach(student => {
+                    const inClassPoints = (student.scores.inClassPlus * settings.inClassPlus) + (student.scores.inClassMinus * settings.inClassMinus);
+                    const homeworkPoints = (student.scores.homeworkPlus * settings.homeworkPlus) + (student.scores.homeworkMinus * settings.homeworkMinus);
+
+                    const dersIciRaporNotu = Math.round(Math.max(0, Math.min(100, settings.baseScore + (inClassPoints * 2))));
+                    const performansOdeviRaporNotu = Math.round(Math.max(0, Math.min(100, settings.baseScore + (homeworkPoints * 2))));
+
+                    const distributedInClass = distributeScores(dersIciRaporNotu, IN_CLASS_CRITERIA);
+                    const distributedPerformance = distributeScores(performansOdeviRaporNotu, PERFORMANCE_TASK_CRITERIA);
+
+                    htmlContent += `
+                        <div class="pdf-page-break" style="padding: 20mm; box-sizing: border-box; width: 210mm; height: 297mm;">
+                             <div style="text-align: center; margin-bottom: 10mm;">
+                                <h1 style="font-size: 18px; font-weight: bold; margin: 0;">${settings.schoolName || 'OKUL ADI'}</h1>
+                                <h2 style="font-size: 16px; margin: 5px 0;">Öğrenci Detay Raporu</h2>
+                            </div>
+                            <p style="font-size: 12px; margin-bottom: 10mm;"><b>Öğrenci:</b> ${student.name}</p>
+                            
+                            <h3 style="font-size: 14px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 5mm;">Ders İçi Gözlem Formu (Toplam: ${dersIciRaporNotu})</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10mm;">
+                                <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Maks. Puan</th><th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Alınan Puan</th></tr></thead>
+                                <tbody>
+                                    ${Object.entries(IN_CLASS_CRITERIA).map(([key, { label, max }]) => `
+                                        <tr>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">${label}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${max}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${distributedInClass[key]}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+
+                            <h3 style="font-size: 14px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 5mm;">Performans Ödevi Formu (Toplam: ${performansOdeviRaporNotu})</h3>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                                <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Maks. Puan</th><th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Alınan Puan</th></tr></thead>
+                                <tbody>
+                                    ${Object.entries(PERFORMANCE_TASK_CRITERIA).map(([key, { label, max }]) => `
+                                        <tr>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">${label}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${max}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${distributedPerformance[key]}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                });
+
+                reportContainer.innerHTML = htmlContent;
+                document.body.appendChild(reportContainer);
+                
+                const pages = Array.from(reportContainer.children);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+                const processPage = (index) => {
+                    if (index >= pages.length) {
+                        pdf.save(`${activeClass.name} - Detaylı Performans Raporu.pdf`);
+                        document.body.removeChild(reportContainer);
+                        setIsGeneratingPdf(false);
+                        return;
+                    }
+                    window.html2canvas(pages[index], { scale: 2, useCORS: true }).then(pageCanvas => {
+                        if (index > 0) pdf.addPage();
+                        const imgData = pageCanvas.toDataURL('image/png');
+                        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                        processPage(index + 1);
+                    }).catch(err => {
+                        console.error("PDF Sayfa oluşturma hatası:", err);
+                        setIsGeneratingPdf(false);
+                    });
+                };
+                processPage(0);
             };
             
             const NoteModal = ({ student, onSave, onClose }) => {
@@ -284,23 +553,25 @@
 
             return (
                 <Fragment>
-                    <div className="max-w-7xl mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-4 sm:p-6 text-white pb-32">
+                    <div className="w-full bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-4 sm:p-6 text-white pb-32">
                         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
-                            <div>
+                             <div>
                                 <h1 className="cool-title text-4xl font-bold">Performans Paneli</h1>
                                 {settings.teacherName && (
                                     <div className="teacher-info mt-2 text-slate-400 text-sm">
                                         <span>{settings.teacherName}</span><span className="mx-2">|</span><span>{settings.branchName}</span><span className="mx-2">|</span><span>{settings.schoolName}</span>
                                     </div>
                                 )}
-                            </div>
-                            <div className="flex gap-2 self-start sm:self-center">
+                             </div>
+                             <div className="flex gap-2 self-start sm:self-center">
                                 <button onClick={() => setActiveView('classes')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <ClassesIcon /> Sınıflar </button>
                                 <button onClick={() => setActiveView('settings')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <SettingsIcon /> Ayarlar </button>
-                            </div>
+                                <button onClick={() => auth.signOut()} className={`flex items-center gap-2 py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white`}> <LogOutIcon /> Çıkış Yap </button>
+                             </div>
                         </div>
+                        
                         {activeView === 'settings' && (
-                           <div className="confirm-modal">
+                            <div className="confirm-modal">
                                 <h2 className="text-2xl font-bold text-slate-100 mb-4">Genel Ayarlar</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900/50 p-6 rounded-lg border border-slate-700">
                                     <div className="flex flex-col gap-4">
@@ -327,6 +598,7 @@
                                 </div>
                             </div>
                         )}
+
                         {activeView === 'classes' && (
                             <div>
                                 <div className="mb-8">
@@ -400,8 +672,12 @@
                                                 <button onClick={handleUndoLastAction} disabled={!lastAction} className="flex items-center justify-center gap-2 bg-amber-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed">
                                                     <UndoIcon/> Geri Al
                                                 </button>
-                                                <button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors disabled:bg-slate-500 disabled:cursor-wait">
-                                                    <DownloadIcon/> {isGeneratingPdf ? 'Oluşturuluyor...' : 'Raporu İndir (PDF)'}
+                                                {/* --- YENİ: İki Ayrı Rapor Butonu --- */}
+                                                <button onClick={handleGenerateSimplePdf} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500 transition-colors disabled:bg-slate-500 disabled:cursor-wait">
+                                                    <DownloadIcon/> {isGeneratingPdf ? 'Oluşturuluyor...' : 'Basit Rapor İndir'}
+                                                </button>
+                                                <button onClick={handleGenerateDetailedPdf} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-500 disabled:cursor-wait">
+                                                    <DownloadIcon/> {isGeneratingPdf ? 'Oluşturuluyor...' : 'Detaylı Rapor İndir'}
                                                 </button>
                                             </div>
                                         </div>
@@ -415,6 +691,26 @@
                     {editingNoteStudent && <NoteModal student={editingNoteStudent} onSave={handleSaveNote} onClose={() => setEditingNoteStudent(null)} />}
                 </Fragment>
             );
+        }
+
+        // Ana Uygulama Yöneticisi (Değişiklik yok)
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(user => {
+                    setUser(user);
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) {
+                return <div className="text-center text-white text-2xl">Yükleniyor...</div>;
+            }
+
+            return user ? <PerformancePanel user={user} /> : <AuthScreen />;
         }
 
         ReactDOM.render(<App />, document.getElementById('root'));
