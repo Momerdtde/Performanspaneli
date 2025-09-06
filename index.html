@@ -59,15 +59,19 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Raporlama için Kriterler
-        const IN_CLASS_CRITERIA = {
-            derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 }
-        };
-        const PERFORMANCE_TASK_CRITERIA = {
-            ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 }, plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 }, bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 }, kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 }, sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 }, materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 }, anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 }, kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 }, zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 }
+        // Raporlama Kriterleri
+        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
+        const PERFORMANCE_TASK_CRITERIA = { ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 }, plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 }, bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 }, kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 }, sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 }, materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 }, anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 }, kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 }, zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 } };
+        const SPEAKING_EXAM_CRITERIA = {
+            ifadeler: { label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.' },
+            gerekce: { label: 'Konuşmada öne sürmek için ortaya koyulan önerme gerekçelendirilmiştir.' },
+            gereksizSes: { label: 'Konuşmada gereksiz sesler (ıı, eee), tekrarlar (cümle, sözcük tekrarları, yani, şey vb. kelimeler) ve duraksamalar görülmemiştir.' },
+            telaffuz: { label: 'Konuşmada ses, hece ve kelimelerin telaffuz, vurgu ve tonlaması doğrudur.' },
+            sure: { label: 'Konuşma, belirtilen sürede yapılmıştır.' }
         };
 
         // İkonlar
+        const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>;
         const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
         const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
         const MinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
@@ -91,9 +95,7 @@
         }
         
         const StudentAssessmentCard = memo(({ student, semester, onScoreChange }) => {
-            const donemKey = semester === 1 ? 'donem1' : 'donem2';
-            const assessment = student.assessments[donemKey];
-
+            const donemKey = semester === 1 ? 'donem1' : 'donem2'; const assessment = student.assessments[donemKey];
             const calculatePerf1 = () => { const notes = [assessment.sozlu1, assessment.yazili1, assessment.sozlu2, assessment.yazili2]; const validNotes = notes.filter(n => n !== null && n !== '' && !isNaN(n)); if (validNotes.length === 0) return '-'; const sum = validNotes.reduce((acc, n) => acc + Number(n), 0); return Math.round(sum / validNotes.length); };
             const calculatePerf2 = () => { const bookNotes = [assessment.kitap1, assessment.kitap2]; const validBookNotes = bookNotes.filter(n => n !== null && n !== '' && !isNaN(n)); const gozlemNotu = (assessment.dersIciGozlem !== null && assessment.dersIciGozlem !== '' && !isNaN(assessment.dersIciGozlem)) ? Number(assessment.dersIciGozlem) : null; let kitapOrt = null; if (validBookNotes.length > 0) { const sum = validBookNotes.reduce((acc, n) => acc + Number(n), 0); kitapOrt = sum / validBookNotes.length; } if (kitapOrt !== null && gozlemNotu !== null) { return Math.round((kitapOrt + gozlemNotu) / 2); } else if (kitapOrt !== null) { return Math.round(kitapOrt); } else if (gozlemNotu !== null) { return gozlemNotu; } return '-'; };
             const perf1 = calculatePerf1();
@@ -112,6 +114,35 @@
         
         const StudentScoreRow = memo(({ student, onUpdateScore, onManualChange, onDelete, onOpenNotes, calculateGrade }) => {
             return ( <div className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/50"> <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0"> <button onClick={() => onDelete(student)} className="p-1 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"><TrashIcon/></button> {student.name} </div> <div className="flex flex-col gap-2 md:col-span-6 md:grid md:grid-cols-2 md:gap-4"> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sınıf İçi:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="p-1.5 bg-green-500/20 text-green-300 rounded-full"><PlusIcon/></button> <input type="number" defaultValue={student.scores.inClassPlus} onBlur={(e) => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-green-400 ${focusClasses}`}/> <input type="number" defaultValue={student.scores.inClassMinus} onBlur={(e) => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-red-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="p-1.5 bg-red-500/20 text-red-300 rounded-full"><MinusIcon/></button> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Ödev:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="p-1.5 bg-sky-500/20 text-sky-300 rounded-full"><PlusIcon/></button> <input type="number" defaultValue={student.scores.homeworkPlus} onBlur={(e) => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-sky-400 ${focusClasses}`}/> <input type="number" defaultValue={student.scores.homeworkMinus} onBlur={(e) => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-orange-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="p-1.5 bg-orange-500/20 text-orange-300 rounded-full"><MinusIcon/></button> </div> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Notlar:</span> <button onClick={() => onOpenNotes(student)} className="p-2 text-slate-400 hover:text-white"><NoteIcon/></button> </div> <div className="flex justify-between items-center pt-3 mt-2 border-t border-blue-500/20 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sözlü Notu:</span> <div className="text-center font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">{calculateGrade(student)}</div> </div> </div> );
+        });
+
+        const SpeakingExamModal = memo(({ student, semester, scores, onSave, onClose, onScoreChange, examNumber }) => {
+            const totalScore = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal p-4">
+                    <div className="bg-slate-800 rounded-lg shadow-xl border border-slate-700 w-full max-w-2xl">
+                        <div className="p-6 border-b border-slate-700"><h3 className="text-xl font-bold text-white">{examNumber}. Konuşma Sınavı: <span className="text-blue-400">{student.name}</span></h3></div>
+                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                            <div className="space-y-4">
+                                {Object.entries(SPEAKING_EXAM_CRITERIA).map(([key, { label }]) => (
+                                    <div key={key} className="p-3 bg-slate-900/40 rounded-md">
+                                        <label className="text-slate-300 block mb-3">{label}</label>
+                                        <div className="flex items-center justify-end space-x-6 text-sm text-slate-200">
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 20} onChange={() => onScoreChange(key, 20)} className="form-radio bg-slate-700 text-blue-500" /> <span>Evet (20)</span></label>
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 10} onChange={() => onScoreChange(key, 10)} className="form-radio bg-slate-700 text-blue-500" /> <span>Kısmen (10)</span></label>
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 0}  onChange={() => onScoreChange(key, 0)}  className="form-radio bg-slate-700 text-blue-500" /> <span>Hayır (0)</span></label>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="p-6 bg-slate-800/50 flex justify-between items-center border-t border-slate-700">
+                            <div className="text-white font-bold text-lg">Toplam Puan: <span className="text-green-400">{totalScore}</span></div>
+                            <div className="flex gap-4"><button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Kapat</button><button onClick={onSave} className="py-2 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Kaydet</button></div>
+                        </div>
+                    </div>
+                </div>
+            );
         });
 
         function PerformancePanel({ user }) {
@@ -134,6 +165,7 @@
             const [tempClassData, setTempClassData] = useState(null); 
             const [activeSemester, setActiveSemester] = useState(1);
             const [searchTerm, setSearchTerm] = useState('');
+            const [evaluatingSpeaking, setEvaluatingSpeaking] = useState(null);
             
             const activeClass = classes.find(c => c.id === activeClassId);
 
@@ -144,6 +176,10 @@
             const newBookTitleStructure = {
                 donem1: { kitap1: '', kitap2: '' },
                 donem2: { kitap1: '', kitap2: '' }
+            };
+            const newSpeakingExamStructure = {
+                donem1: { sinav1: null, sinav2: null },
+                donem2: { sinav1: null, sinav2: null }
             };
             
             useEffect(() => {
@@ -156,8 +192,10 @@
                             const migratedClasses = (data.classes || []).map(cls => {
                                 const migratedStudents = (cls.students || []).map(student => {
                                     if (!student.assessments || !student.assessments.donem1?.hasOwnProperty('dersIciGozlem')) {
-                                        const defaultAssess = JSON.parse(JSON.stringify(newAssessmentStructure));
-                                        student.assessments = defaultAssess;
+                                        student.assessments = JSON.parse(JSON.stringify(newAssessmentStructure));
+                                    }
+                                    if (!student.speakingExams || !student.speakingExams.donem1?.sinav1?.hasOwnProperty('ifadeler')) {
+                                        student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
                                     }
                                     return student;
                                 });
@@ -193,13 +231,54 @@
 
 
             useEffect(() => {
-                if (activeView === 'assessments' && activeClass) {
+                if ((activeView === 'assessments' || activeView === 'speaking-exam') && activeClass) {
                     setTempClassData(JSON.parse(JSON.stringify(activeClass)));
                 } else {
                     setTempClassData(null);
                 }
                 setSearchTerm('');
             }, [activeView, activeClassId, classes]);
+
+            const handleOpenSpeakingExamModal = (student, semester, examNumber) => {
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
+                const currentScores = (student.speakingExams[donemKey] && student.speakingExams[donemKey][sinavKey]) ? student.speakingExams[donemKey][sinavKey] : {};
+                const initialScores = {};
+                Object.keys(SPEAKING_EXAM_CRITERIA).forEach(key => {
+                    initialScores[key] = currentScores[key] === undefined || currentScores[key] === null ? null : currentScores[key];
+                });
+                setEvaluatingSpeaking({ student, semester, examNumber, scores: initialScores });
+            };
+
+            const handleSpeakingScoreChange = (key, value) => {
+                setEvaluatingSpeaking(prev => ({
+                    ...prev,
+                    scores: { ...prev.scores, [key]: value }
+                }));
+            };
+
+            const handleSaveSpeakingExam = () => {
+                if (!evaluatingSpeaking) return;
+                const { student, semester, examNumber, scores } = evaluatingSpeaking;
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
+                const updatedClasses = classes.map(cls => {
+                    if (cls.id !== activeClassId) return cls;
+                    return {
+                        ...cls,
+                        students: cls.students.map(s => {
+                            if (s.id !== student.id) return s;
+                            const newSpeakingExams = JSON.parse(JSON.stringify(s.speakingExams));
+                            if(!newSpeakingExams[donemKey]) newSpeakingExams[donemKey] = {};
+                            newSpeakingExams[donemKey][sinavKey] = scores;
+                            return { ...s, speakingExams: newSpeakingExams };
+                        })
+                    };
+                });
+                setClasses(updatedClasses);
+                setEvaluatingSpeaking(null);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+            };
 
             const handleSaveAssessments = useCallback(() => {
                 const updatedClasses = classes.map(cls => cls.id === activeClassId ? tempClassData : cls);
@@ -304,9 +383,65 @@
                 });
             };
 
+            const handleGenerateSpeakingExamReport = () => {
+                 if (!activeClass) return;
+                 setIsGeneratingPdf(true);
+                 const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                 const criteriaListHtml = Object.values(SPEAKING_EXAM_CRITERIA).map((c, i) => `<li style="margin-bottom: 2mm;"><b>${i + 1}:</b> ${c.label}</li>`).join('');
+                 const tableHeaderHtml = Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('');
+                 
+                 const tableBodyHtml = (examKey, examLabel) => activeClass.students.map(student => {
+                    const scores = student.speakingExams[donemKey]?.[examKey] || {};
+                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
+                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`}).join('');
+
+                 const reportHTML = `
+                    <div style="padding: 15mm; color: black; font-family: sans-serif;">
+                        <div style="text-align: center; margin-bottom: 8mm;">
+                             <h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
+                            <h2 style="font-size: 14px;">${activeClass.name} Sınıfı ${activeSemester}. Dönem Konuşma Sınavları Raporu</h2>
+                            <p style="font-size: 11px;">${settings.teacherName || 'Öğretmen'} - ${settings.branchName || 'Branş'}</p>
+                        </div>
+                        <div style="font-size: 10px; margin-bottom: 8mm;">
+                            <h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 12px;">Ölçütler:</h4>
+                            <ol style="list-style-position: inside; padding-left: 5px; margin: 0; line-height: 1.5;">${criteriaListHtml}</ol>
+                        </div>
+                        
+                        <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">1. Konuşma Sınavı</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${tableHeaderHtml}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
+                            <tbody>${tableBodyHtml('sinav1')}</tbody>
+                        </table>
+
+                        <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">2. Konuşma Sınavı</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                             <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${tableHeaderHtml}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
+                            <tbody>${tableBodyHtml('sinav2')}</tbody>
+                        </table>
+                    </div>
+                 `;
+                const reportContainer = document.createElement('div'); reportContainer.style.position = 'absolute'; reportContainer.style.left = '-9999px'; reportContainer.style.width = '210mm'; reportContainer.style.backgroundColor = 'white'; reportContainer.innerHTML = reportHTML; document.body.appendChild(reportContainer);
+                window.html2canvas(reportContainer, { scale: 2, useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`${activeClass.name} - ${activeSemester}. Dönem Konuşma Sınavı Raporu.pdf`);
+                    document.body.removeChild(reportContainer);
+                    setIsGeneratingPdf(false);
+                }).catch(err => {
+                     console.error("PDF oluşturma hatası:", err);
+                     document.body.removeChild(reportContainer);
+                     setIsGeneratingPdf(false);
+                });
+            };
+            
             const handleAddClass = () => { if (newClassName.trim() === '') return; const newClass = { id: Date.now(), name: newClassName.trim(), students: [], bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)) }; setClasses(prev => [...prev, newClass]); setActiveClassId(newClass.id); setNewClassName(''); };
-            const handleAddStudent = () => { if (newStudentName.trim() === '' || !activeClassId) return; const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)) }; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent] } : c)); setNewStudentName(''); };
-            const handleImport = () => { if (!activeClassId) return; const names = importText.split('\n').filter(name => name.trim() !== ''); const newStudents = names.map((name, index) => ({ id: Date.now() + index, name: name.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)) })); setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, ...newStudents] } : c )); setImportText(''); };
+            const handleAddStudent = () => { if (newStudentName.trim() === '' || !activeClassId) return; const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) }; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent] } : c)); setNewStudentName(''); };
+            const handleImport = () => { if (!activeClassId) return; const names = importText.split('\n').filter(name => name.trim() !== ''); const newStudents = names.map((name, index) => ({ id: Date.now() + index, name: name.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) })); setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, ...newStudents] } : c )); setImportText(''); };
             
             const handleTempSettingsChange = (e) => {
                 const { name, value } = e.target;
@@ -404,7 +539,8 @@
                              </div>
                              <div className="flex flex-wrap gap-2 self-start sm:self-center">
                                 <button onClick={() => setActiveView('classes')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <ClassesIcon /> Sınıflar </button>
-                                <button onClick={() => setActiveView('assessments')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <BookIcon /> Sınavlar ve Görevler </button>
+                                <button onClick={() => setActiveView('assessments')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <BookIcon /> Performans Notları </button>
+                                <button onClick={() => setActiveView('speaking-exam')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <MicIcon /> Konuşma Sınavı </button>
                                 <button onClick={() => setActiveView('settings')} className={`flex items-center gap-2 py-2 px-4 rounded-lg transition-colors ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}> <SettingsIcon /> Ayarlar </button>
                                 <button onClick={() => auth.signOut()} className={`flex items-center gap-2 py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white`}> <LogOutIcon /> Çıkış Yap </button>
                              </div>
@@ -419,6 +555,44 @@
                                     <div className="flex flex-col gap-4"><h3 className="font-bold text-lg text-blue-400 border-b border-slate-600 pb-2">Sözlü Notu</h3><div><label className="block text-sm font-medium text-slate-400">Başlangıç Notu</label><input type="number" name="baseScore" value={tempSettings.baseScore} onChange={handleTempSettingsChange} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white ${focusClasses}`}/></div></div>
                                 </div>
                                 <div className="mt-6 flex justify-end items-center gap-4">{showSaveConfirmation && <span className="text-green-400 teacher-info">Kaydedildi!</span>}<button onClick={handleSaveSettings} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"><SaveIcon /> Ayarları Kaydet</button></div>
+                            </div>
+                        )}
+
+                        {activeView === 'speaking-exam' && (
+                             <div className="confirm-modal">
+                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Seçimi</h2><div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.length > 0 ? classes.map(c => <div key={c.id} className="relative"><button onClick={() => setActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name}</button></div>) : <p className="text-slate-400">Lütfen önce bir sınıf ekleyin.</p>}</div></div>
+                                {activeClass ? (
+                                    <div>
+                                        <div className="flex border-b border-slate-700 mb-6">
+                                            <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg transition-colors ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>1. Dönem</button>
+                                            <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg transition-colors ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>2. Dönem</button>
+                                        </div>
+                                        <div className="flex justify-end mb-4">
+                                            <button onClick={handleGenerateSpeakingExamReport} disabled={isGeneratingPdf} className="flex items-center gap-2 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700"><DownloadIcon /> Raporu Dışa Aktar</button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {activeClass.students.map(student => {
+                                                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                                                const totalScore1 = student.speakingExams[donemKey]?.sinav1 ? Object.values(student.speakingExams[donemKey].sinav1).reduce((sum, score) => sum + (Number(score) || 0), 0) : 0;
+                                                const totalScore2 = student.speakingExams[donemKey]?.sinav2 ? Object.values(student.speakingExams[donemKey].sinav2).reduce((sum, score) => sum + (Number(score) || 0), 0) : 0;
+                                                return(
+                                                <div key={student.id} className="bg-slate-800/50 rounded-lg p-4">
+                                                    <h4 className="font-medium text-lg text-white mb-3">{student.name}</h4>
+                                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                                                        <div className="flex-1 flex justify-between items-center bg-slate-900/40 p-3 rounded-md">
+                                                            <span>1. Konuşma Sınavı: <span className="font-bold text-xl text-amber-400">{totalScore1}</span></span>
+                                                            <button onClick={() => handleOpenSpeakingExamModal(student, activeSemester, 1)} className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-md text-sm">Değerlendir</button>
+                                                        </div>
+                                                         <div className="flex-1 flex justify-between items-center bg-slate-900/40 p-3 rounded-md">
+                                                            <span>2. Konuşma Sınavı: <span className="font-bold text-xl text-amber-400">{totalScore2}</span></span>
+                                                            <button onClick={() => handleOpenSpeakingExamModal(student, activeSemester, 2)} className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-md text-sm">Değerlendir</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )})}
+                                        </div>
+                                    </div>
+                                ) : <div className="text-center py-10"><h2 className="text-2xl font-bold text-slate-300">Lütfen İşlem Yapmak İçin Bir Sınıf Seçin</h2></div>}
                             </div>
                         )}
                         
@@ -482,6 +656,7 @@
                     {classToDelete && (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal"><div className="bg-slate-800 rounded-lg p-8 shadow-xl border border-slate-700 mx-4"><h3 className="text-xl font-bold text-white mb-4">Sınıfı Silme Onayı</h3><p className="text-slate-300 mb-6">"<span className="font-bold">{classToDelete.name}</span>" sınıfını ve tüm verileri <br/> kalıcı olarak silmek istediğinizden emin misiniz?</p><div className="flex justify-end gap-4"><button onClick={() => setClassToDelete(null)} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Hayır, Vazgeç</button><button onClick={() => confirmDeleteClass(classToDelete.id)} className="py-2 px-5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Evet, Sil</button></div></div></div>)}
                     {studentToDelete && (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal"><div className="bg-slate-800 rounded-lg p-8 shadow-xl border border-slate-700 mx-4"><h3 className="text-xl font-bold text-white mb-4">Öğrenci Silme Onayı</h3><p className="text-slate-300 mb-6">"<span className="font-bold">{studentToDelete.name}</span>" isimli öğrenciyi <br/> kalıcı olarak silmek istediğinizden emin misiniz?</p><div className="flex justify-end gap-4"><button onClick={() => setStudentToDelete(null)} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Hayır, Vazgeç</button><button onClick={() => handleDeleteStudent(studentToDelete.id)} className="py-2 px-5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Evet, Sil</button></div></div></div>)}
                     {editingNoteStudent && <NoteModal student={editingNoteStudent} onSave={handleSaveNote} onClose={() => setEditingNoteStudent(null)} />}
+                    {evaluatingSpeaking && <SpeakingExamModal student={evaluatingSpeaking.student} semester={evaluatingSpeaking.semester} scores={evaluatingSpeaking.scores} onSave={handleSaveSpeakingExam} onClose={() => setEvaluatingSpeaking(null)} onScoreChange={handleSpeakingScoreChange} examNumber={evaluatingSpeaking.examNumber} />}
                 </Fragment>
             );
         }
