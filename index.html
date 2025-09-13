@@ -113,7 +113,7 @@
         };
         
         const StudentScoreRow = memo(({ student, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, calculateGrade }) => {
-            return ( <div className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/50"> <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0"> <span className="text-slate-500 font-semibold w-6">{index + 1}.</span> <button onClick={() => onDelete(student)} className="p-1 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"><TrashIcon/></button> {student.name} </div> <div className="flex flex-col gap-2 md:col-span-6 md:grid md:grid-cols-2 md:gap-4"> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sınıf İçi:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="p-1.5 bg-green-500/20 text-green-300 rounded-full"><PlusIcon/></button> <input type="number" defaultValue={student.scores.inClassPlus} onBlur={(e) => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-green-400 ${focusClasses}`}/> <input type="number" defaultValue={student.scores.inClassMinus} onBlur={(e) => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-red-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="p-1.5 bg-red-500/20 text-red-300 rounded-full"><MinusIcon/></button> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Ödev:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="p-1.5 bg-sky-500/20 text-sky-300 rounded-full"><PlusIcon/></button> <input type="number" defaultValue={student.scores.homeworkPlus} onBlur={(e) => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-sky-400 ${focusClasses}`}/> <input type="number" defaultValue={student.scores.homeworkMinus} onBlur={(e) => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-orange-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="p-1.5 bg-orange-500/20 text-orange-300 rounded-full"><MinusIcon/></button> </div> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Notlar:</span> <button onClick={() => onOpenNotes(student)} className="p-2 text-slate-400 hover:text-white"><NoteIcon/></button> </div> <div className="flex justify-between items-center pt-3 mt-2 border-t border-blue-500/20 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sözlü Notu:</span> <div className="text-center font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">{calculateGrade(student)}</div> </div> </div> );
+            return ( <div className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/50"> <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0"> <span className="text-slate-500 font-semibold w-6">{index + 1}.</span> <button onClick={() => onDelete(student)} className="p-1 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"><TrashIcon/></button> {student.name} </div> <div className="flex flex-col gap-2 md:col-span-6 md:grid md:grid-cols-2 md:gap-4"> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sınıf İçi:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="p-1.5 bg-green-500/20 text-green-300 rounded-full"><PlusIcon/></button> <input type="number" value={student.scores.inClassPlus} onChange={(e) => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-green-400 ${focusClasses}`}/> <input type="number" value={student.scores.inClassMinus} onChange={(e) => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-red-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="p-1.5 bg-red-500/20 text-red-300 rounded-full"><MinusIcon/></button> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Ödev:</span> <div className="flex items-center gap-1.5"> <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="p-1.5 bg-sky-500/20 text-sky-300 rounded-full"><PlusIcon/></button> <input type="number" value={student.scores.homeworkPlus} onChange={(e) => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-sky-400 ${focusClasses}`}/> <input type="number" value={student.scores.homeworkMinus} onChange={(e) => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-orange-400 ${focusClasses}`}/> <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="p-1.5 bg-orange-500/20 text-orange-300 rounded-full"><MinusIcon/></button> </div> </div> </div> <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Notlar:</span> <button onClick={() => onOpenNotes(student)} className="p-2 text-slate-400 hover:text-white"><NoteIcon/></button> </div> <div className="flex justify-between items-center pt-3 mt-2 border-t border-blue-500/20 md:border-none md:p-0 md:col-span-1 md:justify-center"> <span className="font-bold text-slate-400 md:hidden">Sözlü Notu:</span> <div className="text-center font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">{calculateGrade(student)}</div> </div> </div> );
         });
 
         const SpeakingExamModal = memo(({ student, semester, scores, onSave, onClose, onScoreChange, examNumber }) => {
@@ -130,7 +130,7 @@
                                         <div className="flex items-center justify-end space-x-6 text-sm text-slate-200">
                                             <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 20} onChange={() => onScoreChange(key, 20)} className="form-radio bg-slate-700 text-blue-500" /> <span>Evet (20)</span></label>
                                             <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 10} onChange={() => onScoreChange(key, 10)} className="form-radio bg-slate-700 text-blue-500" /> <span>Kısmen (10)</span></label>
-                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 0}  onChange={() => onScoreChange(key, 0)}  className="form-radio bg-slate-700 text-blue-500" /> <span>Hayır (0)</span></label>
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" name={`${student.id}-${key}`} checked={scores[key] === 0 || scores[key] === null}  onChange={() => onScoreChange(key, 0)}  className="form-radio bg-slate-700 text-blue-500" /> <span>Hayır (0)</span></label>
                                         </div>
                                     </div>
                                 ))}
@@ -389,15 +389,6 @@
                  if (!activeClass) return;
                  setIsGeneratingPdf(true);
                  const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
-                 const criteriaListHtml = Object.values(SPEAKING_EXAM_CRITERIA).map((c, i) => `<li style="margin-bottom: 2mm;"><b>${i + 1}:</b> ${c.label}</li>`).join('');
-                 const tableHeaderHtml = Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('');
-                 
-                 const tableBodyHtml = (examKey) => activeClass.students.map((student, index) => {
-                    const scores = student.speakingExams[donemKey]?.[examKey] || {};
-                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
-                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`}).join('');
-
                  const reportHTML = `
                     <div style="padding: 15mm; color: black; font-family: sans-serif;">
                         <div style="text-align: center; margin-bottom: 8mm;">
@@ -407,19 +398,49 @@
                         </div>
                         <div style="font-size: 10px; margin-bottom: 8mm;">
                             <h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 12px;">Ölçütler:</h4>
-                            <ol style="list-style-position: inside; padding-left: 5px; margin: 0; line-height: 1.5;">${criteriaListHtml}</ol>
+                            <ol style="list-style-position: inside; padding-left: 5px; margin: 0; line-height: 1.5;">
+                                ${Object.values(SPEAKING_EXAM_CRITERIA).map((c, i) => `<li style="margin-bottom: 2mm;"><b>${i + 1}:</b> ${c.label}</li>`).join('')}
+                            </ol>
                         </div>
                         
                         <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">1. Konuşma Sınavı</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${tableHeaderHtml}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
-                            <tbody>${tableBodyHtml('sinav1')}</tbody>
+                            <thead>
+                                <tr style="background-color: #f2f2f2;">
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th>
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>
+                                    ${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeClass.students.map((student, index) => {
+                                    const scores = student.speakingExams[donemKey]?.sinav1 || {};
+                                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
+                                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
+                                }).join('')}
+                            </tbody>
                         </table>
 
                         <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">2. Konuşma Sınavı</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                             <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${tableHeaderHtml}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
-                            <tbody>${tableBodyHtml('sinav2')}</tbody>
+                             <thead>
+                                <tr style="background-color: #f2f2f2;">
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th>
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>
+                                    ${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}
+                                    <th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeClass.students.map((student, index) => {
+                                    const scores = student.speakingExams[donemKey]?.sinav2 || {};
+                                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
+                                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
+                                }).join('')}
+                            </tbody>
                         </table>
                     </div>
                  `;
