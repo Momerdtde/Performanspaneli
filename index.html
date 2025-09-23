@@ -405,42 +405,24 @@
                         
                         <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">1. Konuşma Sınavı</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <thead>
-                                <tr style="background-color: #f2f2f2;">
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th>
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>
-                                    ${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${activeClass.students.map((student, index) => {
-                                    const scores = student.speakingExams[donemKey]?.sinav1 || {};
-                                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
-                                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
-                                }).join('')}
-                            </tbody>
+                            <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
+                            <tbody>${activeClass.students.map((student, index) => {
+                                const scores = student.speakingExams[donemKey]?.sinav1 || {};
+                                const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                                const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
+                                return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
+                            }).join('')}</tbody>
                         </table>
 
                         <h3 style="font-size: 13px; font-weight: bold; margin-top: 10mm; margin-bottom: 4mm;">2. Konuşma Sınavı</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                             <thead>
-                                <tr style="background-color: #f2f2f2;">
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th>
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>
-                                    ${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}
-                                    <th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${activeClass.students.map((student, index) => {
-                                    const scores = student.speakingExams[donemKey]?.sinav2 || {};
-                                    const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                                    const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
-                                    return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
-                                }).join('')}
-                            </tbody>
+                             <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 8px; text-align: left;">No.</th><th style="border: 1px solid #333; padding: 8px; text-align: left;">Öğrenci Adı</th>${Object.keys(SPEAKING_EXAM_CRITERIA).map((key, index) => `<th style="border: 1px solid #333; padding: 8px; text-align: center; width: 8%;">${index + 1}</th>`).join('')}<th style="border: 1px solid #333; padding: 8px; text-align: center; background-color: #e0f2fe; width: 12%;">Toplam</th></tr></thead>
+                            <tbody>${activeClass.students.map((student, index) => {
+                                const scores = student.speakingExams[donemKey]?.sinav2 || {};
+                                const total = Object.values(scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                                const scoreCells = Object.keys(SPEAKING_EXAM_CRITERIA).map(key => `<td style="border: 1px solid #333; padding: 8px; text-align: center;">${scores[key] !== null && scores[key] !== undefined ? scores[key] : '-'}</td>`).join('');
+                                return `<tr><td style="border: 1px solid #333; padding: 8px;">${index + 1}</td><td style="border: 1px solid #333; padding: 8px;">${student.name}</td>${scoreCells}<td style="border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; background-color: #f0f9ff;">${total}</td></tr>`
+                            }).join('')}</tbody>
                         </table>
                     </div>
                  `;
