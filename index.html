@@ -71,6 +71,8 @@
         };
 
         // İkonlar
+        const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const ArrowUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>;
         const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>;
         const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
         const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
@@ -106,10 +108,10 @@
             return ( <div className="bg-slate-800/50 rounded-lg p-4"> <h4 className="font-bold text-lg text-green-300 mb-3 p-2 border border-green-500 rounded-md bg-green-500/10"><span className="text-slate-400 mr-2">{index + 1}.</span>{student.name}</h4> <div className="flex flex-col space-y-4"> <div className="space-y-2 p-3 bg-slate-900/40 rounded-md"> <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2"> <span className="font-bold text-sky-400">1. Performans Notu</span> <span className="font-bold text-xl text-sky-400">{perf1}</span> </div> <NoteInput type="sozlu1" label="1. Sözlü Görev" /> <NoteInput type="yazili1" label="1. Yazılı Görev" /> <NoteInput type="sozlu2" label="2. Sözlü Görev" /> <NoteInput type="yazili2" label="2. Yazılı Görev" /> </div> <div className="space-y-2 p-3 bg-slate-900/40 rounded-md"> <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2"> <span className="font-bold text-sky-400">2. Performans Notu</span> <span className="font-bold text-xl text-sky-400">{perf2}</span> </div> <NoteInput type="kitap1" label="1. Kitap Sınavı" /> <NoteInput type="kitap2" label="2. Kitap Sınavı" /> <NoteInput type="dersIciGozlem" label="Ders İçi Gözlem" /> </div> </div> </div> );
         });
 
-        const SemesterCard = ({ semester, students, bookTitles, onScoreChange, onBookTitleChange, onSave, onGenerateReport }) => {
+        const SemesterCard = ({ semester, students, bookTitles, onScoreChange, onBookTitleChange, onSave, onGenerateReport, onGenerateBookReport }) => {
             const [showSaveConfirm, setShowSaveConfirm] = useState(false);
             const handleSave = () => { onSave(); setShowSaveConfirm(true); setTimeout(() => setShowSaveConfirm(false), 2000); };
-            return ( <div className="bg-slate-900/50 p-4 sm:p-6 rounded-lg border border-slate-700"> <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4"> <h3 className="text-xl font-bold text-blue-400">{semester}. Dönem Değerlendirmeleri</h3> <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto"> {showSaveConfirm && <span className="text-green-400 teacher-info">Kaydedildi!</span>} <button onClick={handleSave} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700"><SaveIcon /> <span className="hidden sm:inline">Dönemi Kaydet</span></button> <button onClick={onGenerateReport} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500"><DownloadIcon /> <span className="hidden sm:inline">Rapor İndir</span></button> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6"> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 1. Kitap Adı</label><input type="text" value={bookTitles.kitap1} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap1', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 2. Kitap Adı</label><input type="text" value={bookTitles.kitap2} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap2', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> </div> <div className="space-y-3"> {students.map((student, index) => ( <StudentAssessmentCard key={student.id} student={student} index={index} semester={semester} onScoreChange={onScoreChange} /> ))} </div> </div> );
+            return ( <div className="bg-slate-900/50 p-4 sm:p-6 rounded-lg border border-slate-700"> <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4"> <h3 className="text-xl font-bold text-blue-400">{semester}. Dönem Değerlendirmeleri</h3> <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto"> {showSaveConfirm && <span className="text-green-400 teacher-info">Kaydedildi!</span>} <button onClick={handleSave} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700"><SaveIcon /> <span className="hidden sm:inline">Dönemi Kaydet</span></button> <button onClick={onGenerateBookReport} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700"><BookIcon /> <span className="hidden sm:inline">Kitap Raporu</span></button> <button onClick={onGenerateReport} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500"><DownloadIcon /> <span className="hidden sm:inline">Rapor İndir</span></button> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6"> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 1. Kitap Adı</label><input type="text" value={bookTitles.kitap1} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap1', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 2. Kitap Adı</label><input type="text" value={bookTitles.kitap2} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap2', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> </div> <div className="space-y-3"> {students.map((student, index) => ( <StudentAssessmentCard key={student.id} student={student} index={index} semester={semester} onScoreChange={onScoreChange} /> ))} </div> </div> );
         };
         
         const StudentScoreRow = memo(({ student, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, calculateGrade }) => {
@@ -166,6 +168,7 @@
             const [activeSemester, setActiveSemester] = useState(1);
             const [searchTerm, setSearchTerm] = useState('');
             const [evaluatingSpeaking, setEvaluatingSpeaking] = useState(null);
+            const [showScrollTop, setShowScrollTop] = useState(false);
             
             const activeClass = classes.find(c => c.id === activeClassId);
 
@@ -182,6 +185,18 @@
                 donem2: { sinav1: null, sinav2: null }
             };
             
+            useEffect(() => {
+                const checkScrollTop = () => {
+                    if (!showScrollTop && window.pageYOffset > 400){
+                        setShowScrollTop(true);
+                    } else if (showScrollTop && window.pageYOffset <= 400){
+                        setShowScrollTop(false);
+                    }
+                };
+                window.addEventListener('scroll', checkScrollTop);
+                return () => window.removeEventListener('scroll', checkScrollTop);
+            }, [showScrollTop]);
+
             useEffect(() => {
                 if (user) {
                     setIsLoading(true);
@@ -202,7 +217,7 @@
                                 if (!cls.bookTitles) {
                                     cls.bookTitles = JSON.parse(JSON.stringify(newBookTitleStructure));
                                 }
-                                return { ...cls, students: migratedStudents };
+                                return { ...cls, students: migratedStudents.sort((a, b) => a.name.localeCompare(b.name, 'tr')) };
                             });
                             setClasses(migratedClasses);
                             if (data.settings) { 
@@ -221,7 +236,7 @@
             
             useEffect(() => {
                 const handler = setTimeout(() => {
-                    if (!isLoading && user && activeView !== 'assessments') {
+                    if (!isLoading && user && activeView === 'classes') {
                         db.collection('userData').doc(user.uid).set({ classes, settings }, { merge: true })
                            .catch(error => console.error("Veri kaydedilirken hata oluştu:", error));
                     }
@@ -236,8 +251,12 @@
                 } else {
                     setTempClassData(null);
                 }
-                setSearchTerm('');
             }, [activeView, activeClassId, classes]);
+
+            const handleSetActiveClassId = (id) => {
+                setSearchTerm('');
+                setActiveClassId(id);
+            };
 
             const handleOpenSpeakingExamModal = (student, semester, examNumber) => {
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
@@ -269,7 +288,7 @@
                         students: cls.students.map(s => {
                             if (s.id !== student.id) return s;
                             const newSpeakingExams = JSON.parse(JSON.stringify(s.speakingExams));
-                            if(!newSpeakingExams[donemKey]) newSpeakingExams[donemKey] = {};
+                            if(!newSpeakingExams[donemKey]) newSpeakingExams[donemKey] = {sinav1: null, sinav2: null};
                             newSpeakingExams[donemKey][sinavKey] = scores;
                             return { ...s, speakingExams: newSpeakingExams };
                         })
@@ -314,6 +333,72 @@
                     };
                 });
             }, []);
+            
+            const handleGenerateBookReport = (semester) => {
+                if (!tempClassData) return;
+                setIsGeneratingPdf(true);
+
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const bookTitles = tempClassData.bookTitles[donemKey];
+
+                const studentRows = tempClassData.students.map((student, index) => {
+                    const assessment = student.assessments[donemKey];
+                    return `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${student.name}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${assessment.kitap1 !== null ? assessment.kitap1 : '-'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${assessment.kitap2 !== null ? assessment.kitap2 : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const reportHTML = `
+                    <div style="display: flex; flex-direction: column; justify-content: space-between; min-height: 277mm; padding: 20mm; color: black; font-family: sans-serif;">
+                        <div>
+                            <div style="text-align: center; margin-bottom: 10mm;">
+                                <h1 style="font-size: 18px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
+                                <h2 style="font-size: 16px;">${tempClassData.name} Sınıfı ${semester}. Dönem Kitap Sınavı Raporu</h2>
+                                <p style="font-size: 12px;">${settings.teacherName || 'Öğretmen'} - ${settings.branchName || 'Branş'}</p>
+                            </div>
+                            <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5mm;">Okunan Kitaplar</h3>
+                            <p style="font-size: 12px;"><b>1. Kitap:</b> ${bookTitles.kitap1 || 'Belirtilmedi'}</p>
+                            <p style="font-size: 12px;"><b>2. Kitap:</b> ${bookTitles.kitap2 || 'Belirtilmedi'}</p>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10mm;">
+                                <thead>
+                                    <tr style="background-color: #f2f2f2;">
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">No.</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Öğrenci Adı</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">1. Kitap Sınavı</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">2. Kitap Sınavı</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${studentRows}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="text-align: right; font-size: 12px; margin-top: 20mm;">
+                            <p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'}</p>
+                            <p>${settings.branchName || 'Branş'}</p>
+                        </div>
+                    </div>
+                `;
+                const reportContainer = document.createElement('div'); reportContainer.style.position = 'absolute'; reportContainer.style.left = '-9999px'; reportContainer.style.width = '210mm'; reportContainer.style.backgroundColor = 'white'; reportContainer.innerHTML = reportHTML; document.body.appendChild(reportContainer);
+                window.html2canvas(reportContainer, { scale: 2, useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                    pdf.save(`${tempClassData.name} - ${semester}. Dönem Kitap Raporu.pdf`);
+                    document.body.removeChild(reportContainer);
+                    setIsGeneratingPdf(false);
+                }).catch(err => {
+                    console.error("Kitap raporu oluşturma hatası:", err);
+                    document.body.removeChild(reportContainer);
+                    setIsGeneratingPdf(false);
+                });
+            };
 
             const handleGenerateSemesterReport = (semester) => {
                 if (!tempClassData) return;
@@ -445,8 +530,8 @@
             };
             
             const handleAddClass = () => { if (newClassName.trim() === '') return; const newClass = { id: Date.now(), name: newClassName.trim(), students: [], bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)) }; setClasses(prev => [...prev, newClass]); setActiveClassId(newClass.id); setNewClassName(''); };
-            const handleAddStudent = () => { if (newStudentName.trim() === '' || !activeClassId) return; const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) }; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent] } : c)); setNewStudentName(''); };
-            const handleImport = () => { if (!activeClassId) return; const names = importText.split('\n').filter(name => name.trim() !== ''); const newStudents = names.map((name, index) => ({ id: Date.now() + index, name: name.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) })); setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, ...newStudents] } : c )); setImportText(''); };
+            const handleAddStudent = () => { if (newStudentName.trim() === '' || !activeClassId) return; const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) }; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent].sort((a,b) => a.name.localeCompare(b.name, 'tr')) } : c)); setNewStudentName(''); };
+            const handleImport = () => { if (!activeClassId) return; const names = importText.split('\n').filter(name => name.trim() !== ''); const newStudents = names.map((name, index) => ({ id: Date.now() + index, name: name.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)) })); setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, ...newStudents].sort((a,b) => a.name.localeCompare(b.name, 'tr')) } : c )); setImportText(''); };
             
             const handleTempSettingsChange = (e) => {
                 const { name, value } = e.target;
@@ -538,7 +623,8 @@
 
             const filteredStudents = (list) => {
                 if (!list) return [];
-                return list.filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                const normalizedSearchTerm = searchTerm.toLocaleLowerCase('tr-TR');
+                return list.filter(student => student.name.toLocaleLowerCase('tr-TR').includes(normalizedSearchTerm));
             };
 
             if(isLoading) return <div className="text-center text-white text-2xl">Veriler Yükleniyor...</div>;
@@ -574,7 +660,7 @@
 
                         {activeView === 'speaking-exam' && (
                              <div className="confirm-modal">
-                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Seçimi</h2><div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.length > 0 ? classes.map(c => <div key={c.id} className="relative"><button onClick={() => setActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button></div>) : <p className="text-slate-400">Lütfen önce bir sınıf ekleyin.</p>}</div></div>
+                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Seçimi</h2><div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.length > 0 ? classes.map(c => <div key={c.id} className="relative"><button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button></div>) : <p className="text-slate-400">Lütfen önce bir sınıf ekleyin.</p>}</div></div>
                                 {activeClass ? (
                                     <div>
                                         <div className="flex border-b border-slate-700 mb-6">
@@ -612,19 +698,20 @@
                         
                         {activeView === 'assessments' && (
                             <div className="confirm-modal">
-                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Seçimi</h2><div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.length > 0 ? classes.map(c => <div key={c.id} className="relative"><button onClick={() => setActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button></div>) : <p className="text-slate-400">Lütfen önce bir sınıf ekleyin.</p>}</div></div>
+                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Seçimi</h2><div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.length > 0 ? classes.map(c => <div key={c.id} className="relative"><button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button></div>) : <p className="text-slate-400">Lütfen önce bir sınıf ekleyin.</p>}</div></div>
                                 {tempClassData ? (
                                     <div>
                                         <div className="relative mb-6">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><SearchIcon /></div>
                                             <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Öğrenci ara..." className={`w-full p-2 pl-10 bg-slate-800 border border-slate-600 rounded-md text-white ${focusClasses}`}/>
+                                            {searchTerm && (<button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"><XIcon/></button>)}
                                         </div>
                                         <div className="flex border-b border-slate-700 mb-6">
                                             <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg transition-colors ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>1. Dönem</button>
                                             <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg transition-colors ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>2. Dönem</button>
                                         </div>
-                                        {activeSemester === 1 && <SemesterCard semester={1} students={filteredStudents(tempClassData.students)} bookTitles={tempClassData.bookTitles.donem1} onScoreChange={handleTempScoreChange} onBookTitleChange={handleTempBookTitleChange} onSave={handleSaveAssessments} onGenerateReport={() => handleGenerateSemesterReport(1)} />}
-                                        {activeSemester === 2 && <SemesterCard semester={2} students={filteredStudents(tempClassData.students)} bookTitles={tempClassData.bookTitles.donem2} onScoreChange={handleTempScoreChange} onBookTitleChange={handleTempBookTitleChange} onSave={handleSaveAssessments} onGenerateReport={() => handleGenerateSemesterReport(2)} />}
+                                        {activeSemester === 1 && <SemesterCard semester={1} students={filteredStudents(tempClassData.students)} bookTitles={tempClassData.bookTitles.donem1} onScoreChange={handleTempScoreChange} onBookTitleChange={handleTempBookTitleChange} onSave={handleSaveAssessments} onGenerateReport={() => handleGenerateSemesterReport(1)} onGenerateBookReport={() => handleGenerateBookReport(1)} />}
+                                        {activeSemester === 2 && <SemesterCard semester={2} students={filteredStudents(tempClassData.students)} bookTitles={tempClassData.bookTitles.donem2} onScoreChange={handleTempScoreChange} onBookTitleChange={handleTempBookTitleChange} onSave={handleSaveAssessments} onGenerateReport={() => handleGenerateSemesterReport(2)} onGenerateBookReport={() => handleGenerateBookReport(2)} />}
                                     </div>
                                 ) : <div className="text-center py-10"><h2 className="text-2xl font-bold text-slate-300">Lütfen İşlem Yapmak İçin Bir Sınıf Seçin</h2></div>}
                             </div>
@@ -632,7 +719,7 @@
 
                         {activeView === 'classes' && (
                             <div>
-                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Yönetimi</h2><div className="flex gap-2 mb-4"><input type="text" value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="Yeni Sınıf Adı (örn: 11-B)" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-white ${focusClasses}`}/> <button onClick={handleAddClass} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Ekle</button></div>{classes.length > 0 && <div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.map(c => <div key={c.id} className="relative"><button onClick={() => setActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button><button onClick={() => setClassToDelete(c)} className="absolute -top-2 -right-2 bg-red-500/80 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600">X</button></div>)}</div>}</div>
+                                <div className="mb-6"><h2 className="text-xl font-bold text-slate-100 mb-3">Sınıf Yönetimi</h2><div className="flex gap-2 mb-4"><input type="text" value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="Yeni Sınıf Adı (örn: 11-B)" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-white ${focusClasses}`}/> <button onClick={handleAddClass} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Ekle</button></div>{classes.length > 0 && <div className="flex flex-wrap gap-2 border-b-2 border-slate-700 pb-4">{classes.map(c => <div key={c.id} className="relative"><button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-md ${activeClassId === c.id ? 'bg-blue-600 font-bold' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}>{c.name} ({c.students.length})</button><button onClick={() => setClassToDelete(c)} className="absolute -top-2 -right-2 bg-red-500/80 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600">X</button></div>)}</div>}</div>
                                 {activeClass ? (
                                     activeClass.students.length === 0 ? (
                                         <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-6"><h2 className="text-xl font-bold mb-2 text-white">Öğrenci Listesini Aktar ({activeClass.name})</h2><textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder={"1. Ali Yılmaz\n2. Ayşe Kaya..."} className={`w-full h-32 p-3 bg-slate-700 border border-slate-600 rounded-md mb-4 text-white ${focusClasses}`}/><button onClick={handleImport} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700"><UploadCloudIcon /> Listeyi Oluştur</button></div>
@@ -641,13 +728,14 @@
                                             <div className="relative mb-6">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><SearchIcon /></div>
                                                 <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Öğrenci ara..." className={`w-full p-2 pl-10 bg-slate-800 border border-slate-600 rounded-md text-white ${focusClasses}`}/>
+                                                 {searchTerm && (<button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"><XIcon/></button>)}
                                             </div>
                                             <div className="hidden md:grid grid-cols-12 gap-4 font-bold text-slate-400 p-2 border-b-2 border-slate-700 mb-2"><div className="col-span-4">Öğrenci Adı</div><div className="col-span-3 text-center">Sınıf İçi</div><div className="col-span-3 text-center">Ödev</div><div className="col-span-1 text-center">Notlar</div><div className="col-span-1 text-center">Sözlü Notu</div></div>
                                             <div className="space-y-2">{filteredStudents(activeClass.students).map((student, index) => (
                                                 <StudentScoreRow
                                                     key={student.id}
                                                     student={student}
-                                                    index={index}
+                                                    index={activeClass.students.findIndex(s => s.id === student.id)}
                                                     onUpdateScore={updateStudentScore}
                                                     onManualChange={handleManualScoreChange}
                                                     onDelete={setStudentToDelete}
@@ -673,6 +761,7 @@
                     {studentToDelete && (<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal"><div className="bg-slate-800 rounded-lg p-8 shadow-xl border border-slate-700 mx-4"><h3 className="text-xl font-bold text-white mb-4">Öğrenci Silme Onayı</h3><p className="text-slate-300 mb-6">"<span className="font-bold">{studentToDelete.name}</span>" isimli öğrenciyi <br/> kalıcı olarak silmek istediğinizden emin misiniz?</p><div className="flex justify-end gap-4"><button onClick={() => setStudentToDelete(null)} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Hayır, Vazgeç</button><button onClick={() => handleDeleteStudent(studentToDelete.id)} className="py-2 px-5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Evet, Sil</button></div></div></div>)}
                     {editingNoteStudent && <NoteModal student={editingNoteStudent} onSave={handleSaveNote} onClose={() => setEditingNoteStudent(null)} />}
                     {evaluatingSpeaking && <SpeakingExamModal student={evaluatingSpeaking.student} semester={evaluatingSpeaking.semester} scores={evaluatingSpeaking.scores} onSave={handleSaveSpeakingExam} onClose={() => setEvaluatingSpeaking(null)} onScoreChange={handleSpeakingScoreChange} examNumber={evaluatingSpeaking.examNumber} />}
+                    {showScrollTop && (<button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-opacity z-50"><ArrowUpIcon /></button>)}
                 </Fragment>
             );
         }
