@@ -69,14 +69,16 @@
             telaffuz: { label: 'Konuşmada ses, hece ve kelimelerin telaffuz, vurgu ve tonlaması doğrudur.' },
             sure: { label: 'Konuşma, belirtilen sürede yapılmıştır.' }
         };
+        // 9. Sınıf Konuşma Sınavı Kriterleri - Puanlama Güncellendi
         const SPEAKING_EXAM_9TH_CRITERIA = {
             planlama: { label: "Planlama", max: 15, details: ["Konuşmaya etkili bir giriş yapmış, konuşmayı sürdürmüş ve etkili bir şekilde tamamlamıştır.", "Görüşlerine uygun örnekler sunmuştur."] },
             dusunselSurec: { label: "Düşünsel Süreçleri Kontrol Etme", max: 15, details: ["Düşünceleri, konuşmanın ana fikri etrafında ifade etmiştir.", "Düşüncelerini tekrara düşmeden sunmuştur."] },
             sozVarligi: { label: "Söz Varlığı", max: 15, details: ["Bağlama uygun zengin bir kelime hazinesiyle anlatımını zenginleştirmiştir.", "Dilimize henüz yerleşmemiş yabancı kelimelerin yerine Türkçe kelimeleri kullanmıştır."] },
             organizasyon: { label: "Organizasyon", max: 10, details: ["Duygu ve düşüncelerini tutarlı bir biçimde organize etmiştir."] },
-            akicilik: { label: "Akıcılık", max: 20, details: ["İşitilebilir bir ses tonuyla konuşmuştur.", "Gereksiz ses tekrarına düşmeden akıcı bir şekilde konuşmuştur.", "Vurgu ve tonlamaya dikkat ederek konuşmuştur."] },
+            akicilik: { label: "Akıcılık", max: 15, details: ["İşitilebilir bir ses tonuyla konuşmuştur.", "Gereksiz ses tekrarına düşmeden akıcı bir şekilde konuşmuştur.", "Vurgu ve tonlamaya dikkat ederek konuşmuştur."] },
             bedenDili: { label: "Beden Dili", max: 15, details: ["Sunumda jest ve mimiklerini etkili kullanmış, dinleyicilerle yeterli göz temasını kurmuştur."] },
-            isBirligi: { label: "İş Birliği", max: 10, details: ["Grup çalışmalarında üzerine düşen sorumlulukları yerine getirmiştir."] }
+            isBirligi: { label: "İş Birliği", max: 10, details: ["Grup çalışmalarında üzerine düşen sorumlulukları yerine getirmiştir."] },
+            zamanYonetimi: { label: "Zaman Yönetimi", max: 10, details: ["Konuşmayı verilen süre içerisinde tamamlamıştır."] } // Yeni kriter ve puan
         };
 
         // İkonlar
@@ -874,7 +876,7 @@
                 setIsGeneratingPdf(true);
                 
                 const students = activeClass.students;
-                const studentsPerPage = 15;
+                const studentsPerPage = 15; // Yatayda daha az sığar
                 const numPages = Math.ceil(students.length / studentsPerPage);
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
                 const criteriaKeys = Object.keys(SPEAKING_EXAM_CRITERIA);
@@ -882,7 +884,7 @@
                 const reportContainer = document.createElement('div');
                 reportContainer.style.position = 'absolute';
                 reportContainer.style.left = '-9999px';
-                reportContainer.style.width = '297mm';
+                reportContainer.style.width = '297mm'; // Yatay A4
                 reportContainer.style.backgroundColor = 'white';
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
@@ -946,7 +948,7 @@
                     </div>`;
                 }
 
-                reportContainer.innerHTML = studentPagesHtml; // Kriter sayfası kaldırıldı, ilk sayfaya eklendi
+                reportContainer.innerHTML = studentPagesHtml;
                 document.body.appendChild(reportContainer);
 
                 const pages = Array.from(reportContainer.children);
@@ -1064,7 +1066,7 @@
                 setIsGeneratingPdf(true);
                 
                 const students = activeClass.students;
-                const studentsPerPage = 15;
+                const studentsPerPage = 14; // Sayfa başına düşen öğrenci sayısı azaltıldı
                 const numPages = Math.ceil(students.length / studentsPerPage);
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
                 const criteriaKeys = Object.keys(SPEAKING_EXAM_9TH_CRITERIA);
@@ -1072,7 +1074,7 @@
                 const reportContainer = document.createElement('div');
                 reportContainer.style.position = 'absolute';
                 reportContainer.style.left = '-9999px';
-                reportContainer.style.width = '297mm';
+                reportContainer.style.width = '297mm'; // Yatay A4
                 reportContainer.style.backgroundColor = 'white';
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
@@ -1131,6 +1133,7 @@
                                 </thead>
                                 <tbody>${summaryRows}</tbody>
                             </table>
+                            <div style="height: 10px;"></div> {/* Tablo altına ekstra boşluk */}
                         </div>
                         ${footerHtml}
                     </div>`;
@@ -1164,6 +1167,7 @@
                 };
                 processPage(0);
             };
+
 
             const handleAddClass = () => { if (newClassName.trim() === '') return; const newClass = { id: Date.now(), name: newClassName.trim(), students: [], bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)) }; setClasses(prev => [...prev, newClass]); setActiveClassId(newClass.id); setNewClassName(''); };
             const handleAddStudent = () => { if (newStudentName.trim() === '' || !activeClassId) return; const newStudent = { id: Date.now(), name: newStudentName.trim(), notes: '', scores: { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 }, assessments: JSON.parse(JSON.stringify(newAssessmentStructure)), speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure)), speakingExams9th: JSON.parse(JSON.stringify(newSpeakingExam9thStructure)) }; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: [...c.students, newStudent].sort((a,b) => a.name.localeCompare(b.name, 'tr')) } : c)); setNewStudentName(''); };
@@ -1453,3 +1457,4 @@
     </script>
 </body>
 </html>
+
