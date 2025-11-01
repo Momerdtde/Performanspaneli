@@ -19,7 +19,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&display=swap');
@@ -54,7 +53,6 @@
 
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
-            firebase.analytics();
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -69,17 +67,19 @@
             telaffuz: { label: 'Konuşmada ses, hece ve kelimelerin telaffuz, vurgu ve tonlaması doğrudur.' },
             sure: { label: 'Konuşma, belirtilen sürede yapılmıştır.' }
         };
-        // 9. Sınıf Konuşma Sınavı Kriterleri - Puanlama Güncellendi
+        
+        // 9. Sınıf Konuşma Sınavı Kriterleri - Puanlama Güncellendi (Tüm seçenekler 5'in katı)
         const SPEAKING_EXAM_9TH_CRITERIA = {
-            planlama: { label: "Planlama", max: 15, details: ["Konuşmaya etkili bir giriş yapmış, konuşmayı sürdürmüş ve etkili bir şekilde tamamlamıştır.", "Görüşlerine uygun örnekler sunmuştur."] },
-            dusunselSurec: { label: "Düşünsel Süreçleri Kontrol Etme", max: 15, details: ["Düşünceleri, konuşmanın ana fikri etrafında ifade etmiştir.", "Düşüncelerini tekrara düşmeden sunmuştur."] },
-            sozVarligi: { label: "Söz Varlığı", max: 15, details: ["Bağlama uygun zengin bir kelime hazinesiyle anlatımını zenginleştirmiştir.", "Dilimize henüz yerleşmemiş yabancı kelimelerin yerine Türkçe kelimeleri kullanmıştır."] },
+            planlama: { label: "Planlama", max: 10, details: ["Konuşmaya etkili bir giriş yapmış, konuşmayı sürdürmüş ve etkili bir şekilde tamamlamıştır.", "Görüşlerine uygun örnekler sunmuştur."] },
+            dusunselSurec: { label: "Düşünsel Süreçleri Kontrol Etme", max: 10, details: ["Düşünceleri, konuşmanın ana fikri etrafında ifade etmiştir.", "Düşüncelerini tekrara düşmeden sunmuştur."] },
+            sozVarligi: { label: "Söz Varlığı", max: 20, details: ["Bağlama uygun zengin bir kelime hazinesiyle anlatımını zenginleştirmiştir.", "Dilimize henüz yerleşmemiş yabancı kelimelerin yerine Türkçe kelimeleri kullanmıştır."] },
             organizasyon: { label: "Organizasyon", max: 10, details: ["Duygu ve düşüncelerini tutarlı bir biçimde organize etmiştir."] },
-            akicilik: { label: "Akıcılık", max: 15, details: ["İşitilebilir bir ses tonuyla konuşmuştur.", "Gereksiz ses tekrarına düşmeden akıcı bir şekilde konuşmuştur.", "Vurgu ve tonlamaya dikkat ederek konuşmuştur."] },
-            bedenDili: { label: "Beden Dili", max: 15, details: ["Sunumda jest ve mimiklerini etkili kullanmış, dinleyicilerle yeterli göz temasını kurmuştur."] },
+            akicilik: { label: "Akıcılık", max: 20, details: ["İşitilebilir bir ses tonuyla konuşmuştur.", "Gereksiz ses tekrarına düşmeden akıcı bir şekilde konuşmuştur.", "Vurgu ve tonlamaya dikkat ederek konuşmuştur."] },
+            bedenDili: { label: "Beden Dili", max: 10, details: ["Sunumda jest ve mimiklerini etkili kullanmış, dinleyicilerle yeterli göz temasını kurmuştur."] },
             isBirligi: { label: "İş Birliği", max: 10, details: ["Grup çalışmalarında üzerine düşen sorumlulukları yerine getirmiştir."] },
-            zamanYonetimi: { label: "Zaman Yönetimi", max: 10, details: ["Konuşmayı verilen süre içerisinde tamamlamıştır."] } // Yeni kriter ve puan
+            zamanYonetimi: { label: "Zaman Yönetimi", max: 10, details: ["Konuşmayı verilen süre içerisinde tamamlamıştır."] }
         };
+
 
         // İkonlar
         const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
@@ -215,15 +215,15 @@
                                              <div className="flex items-center justify-end space-x-4 text-sm text-slate-200">
                                                 <label className="flex items-center space-x-2 cursor-pointer">
                                                     <input type="radio" name={`${student.id}-${key}-${examNumber}`} checked={scores[key] === max} onChange={() => onScoreChange(key, max)} className="form-radio bg-slate-700 text-blue-500" />
-                                                    <span>Tam</span>
+                                                    <span>Tam ({max})</span>
                                                 </label>
                                                 <label className="flex items-center space-x-2 cursor-pointer">
                                                     <input type="radio" name={`${student.id}-${key}-${examNumber}`} checked={scores[key] === Math.round(max/2)} onChange={() => onScoreChange(key, Math.round(max/2))} className="form-radio bg-slate-700 text-blue-500" />
-                                                    <span>Orta</span>
+                                                    <span>Orta ({Math.round(max/2)})</span>
                                                 </label>
                                                 <label className="flex items-center space-x-2 cursor-pointer">
                                                     <input type="radio" name={`${student.id}-${key}-${examNumber}`} checked={scores[key] === 0 || scores[key] === null}  onChange={() => onScoreChange(key, 0)}  className="form-radio bg-slate-700 text-blue-500" />
-                                                    <span>Zayıf</span>
+                                                    <span>Zayıf (0)</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -330,8 +330,21 @@
                                         student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
                                         needsUpdate = true;
                                     }
-                                    if (!student.speakingExams9th || !student.speakingExams9th.donem1?.hasOwnProperty('sinav1')) {
+                                    // 9. sınıf veri yapısını kontrol et (yeni kriter 'zamanYonetimi' eksikse ekle)
+                                    if (!student.speakingExams9th || !student.speakingExams9th.donem1?.sinav1?.hasOwnProperty('zamanYonetimi')) {
+                                        const oldExams = student.speakingExams9th ? JSON.parse(JSON.stringify(student.speakingExams9th)) : {};
                                         student.speakingExams9th = JSON.parse(JSON.stringify(newSpeakingExam9thStructure));
+                                        
+                                        // Eski veriyi (eğer varsa) yeni yapıya taşımaya çalış
+                                        if(oldExams.donem1) {
+                                            student.speakingExams9th.donem1.sinav1 = oldExams.donem1.sinav1 || null;
+                                            student.speakingExams9th.donem1.sinav2 = oldExams.donem1.sinav2 || null;
+                                        }
+                                        if(oldExams.donem2) {
+                                            student.speakingExams9th.donem2.sinav1 = oldExams.donem2.sinav1 || null;
+                                            student.speakingExams9th.donem2.sinav2 = oldExams.donem2.sinav2 || null;
+                                        }
+                                        // Not: Puanlama sistemi değiştiği için eski puanlar modalda seçili gelmeyebilir.
                                         needsUpdate = true;
                                     }
                                     return student;
@@ -889,11 +902,11 @@
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
 
-                const criteriaHeaders = (examNum) => criteriaKeys.map((key, i) => `<th style="border: 1px solid #333; padding: 4px; font-size: 8px;">Krit. ${i+1} (${examNum})</th>`).join('');
+                const criteriaHeaders = (examNum) => criteriaKeys.map((key, i) => `<th style="border: 1px solid #333; padding: 4px; font-size: 8px; width: 5%;">Krit. ${i+1} (${examNum})</th>`).join('');
 
                 const criteriaNotes = Object.entries(SPEAKING_EXAM_CRITERIA).map(([key, { label }], i) => `<li><b>Krit. ${i+1}:</b> ${label} (Maks: 20)</li>`).join('');
                 
-                let studentPagesHtml = '';
+                let htmlContent = '';
                 for (let i = 0; i < numPages; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const summaryRows = studentChunk.map((student, index) => {
@@ -902,7 +915,8 @@
                         const sinav2_scores = student.speakingExams[donemKey]?.sinav2 || {};
                         const sinav1_total = Object.values(sinav1_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
                         const sinav2_total = Object.values(sinav2_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                        const ortalama = Math.round((sinav1_total + sinav2_total) / 2);
+                        const ortalama = (sinav1_total > 0 || sinav2_total > 0) ? Math.round((sinav1_total + sinav2_total) / ((sinav1_total > 0 ? 1 : 0) + (sinav2_total > 0 ? 1 : 0))) : 0;
+
 
                         const sinav1_cells = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${sinav1_scores[key] ?? '-'}</td>`).join('');
                         const sinav2_cells = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${sinav2_scores[key] ?? '-'}</td>`).join('');
@@ -916,16 +930,21 @@
                         </tr>`;
                     }).join('');
 
-                    const footerHtml = (i === numPages - 1) ? `<div style="position: absolute; bottom: 15mm; right: 15mm; font-size: 10px; text-align: right;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'} (${settings.branchName || 'Branş'})</p></div>` : '';
-                    studentPagesHtml += `<div class="pdf-page-break" style="box-sizing: border-box; width: 297mm; height: 210mm; padding: 15mm; position: relative;">
+                    // SON SAYFA DEĞİLSE BOŞLUK EKLE
+                    const footerHtml = (i === numPages - 1) 
+                        ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'} (${settings.branchName || 'Branş'})</p></div>`
+                        : '<div style="height: 30px;"></div>';
+
+                    htmlContent += `<div class="pdf-page-break" style="box-sizing: border-box; width: 297mm; height: 210mm; padding: 15mm; display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
                             <div style="text-align: center; margin-bottom: 5mm;">
                                 <h1 style="font-size: 18px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
                                 <h2 style="font-size: 15px;">${activeClass.name} Sınıfı ${semester}. Dönem Konuşma Sınavları Özet Raporu (Sayfa ${i + 1}/${numPages})</h2>
                             </div>
-                            <!-- KRİTER AÇIKLAMALARI BURADA BAŞLIYOR -->
-                            <div style="font-size: 9px; margin-bottom: 10mm; padding: 5px; border: 1px solid #ddd; background-color: #fafafa;"><h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 10px;">Kriter Açıklamaları:</h4><ul style="list-style-type: none; padding-left: 0; margin: 0; column-count: 2;">${criteriaNotes}</ul></div>
-                            <!-- KRİTER AÇIKLAMALARI BURADA BİTİYOR -->
+                            <div style="font-size: 9px; margin-bottom: 5mm; padding: 5px 10px; border: 1px solid #e0e7ff; background-color: #f0f4ff; border-radius: 4px;">
+                                <h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 10px; color: #3b82f6;">Kriter Açıklamaları:</h4>
+                                <ul style="list-style-type: none; padding-left: 0; margin: 0; column-count: 2;">${criteriaNotes}</ul>
+                            </div>
                             <h3 style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">Öğrenci Puanları</h3>
                             <table style="width: 100%; border-collapse: collapse; text-align: center;">
                                 <thead>
@@ -948,7 +967,7 @@
                     </div>`;
                 }
 
-                reportContainer.innerHTML = studentPagesHtml;
+                reportContainer.innerHTML = htmlContent; 
                 document.body.appendChild(reportContainer);
 
                 const pages = Array.from(reportContainer.children);
@@ -976,13 +995,14 @@
                 };
                 processPage(0);
             };
-
+            
             const handleGenerateSpeakingExam9thDetailedReport = (semester) => {
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
                 const students = activeClass.students;
                 let htmlContent = '';
+                const criteriaKeys = Object.keys(SPEAKING_EXAM_9TH_CRITERIA);
                 
                 students.forEach(student => {
                     const sinav1_scores = student.speakingExams9th[donemKey]?.sinav1 || {};
@@ -990,36 +1010,46 @@
                     const sinav1_total = Object.values(sinav1_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
                     const sinav2_total = Object.values(sinav2_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
 
-                    const scoreRows = (scores) => Object.entries(SPEAKING_EXAM_9TH_CRITERIA).map(([key, {label, max}]) => `
+                    const scoreRows = (scores) => criteriaKeys.map((key, i) => `
                         <tr>
-                            <td style="border: 1px solid #ddd; padding: 6px; text-align: left;">${label}</td>
-                            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${max}</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: left;"><b>Krit. ${i+1}:</b> ${SPEAKING_EXAM_9TH_CRITERIA[key].label}</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${SPEAKING_EXAM_9TH_CRITERIA[key].max}</td>
                             <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${scores[key] ?? '-'}</td>
                         </tr>`).join('');
+                    
+                    const criteriaNotes = criteriaKeys.map((key, i) => `<li><b>Krit. ${i+1}:</b> ${SPEAKING_EXAM_9TH_CRITERIA[key].label} (Maks: ${SPEAKING_EXAM_9TH_CRITERIA[key].max})</li>`).join('');
 
-                    htmlContent += `<div class="pdf-page-break" style="padding: 15mm; box-sizing: border-box; width: 210mm; height: 297mm;">
-                        <div style="text-align: center; margin-bottom: 8mm;">
-                             <h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
-                             <h2 style="font-size: 14px;">${activeClass.name} Sınıfı ${semester}. Dönem 9. Sınıf Konuşma Sınavı Detay Raporu</h2>
-                        </div>
-                        <p style="font-size: 12px; margin-bottom: 8mm;"><b>Öğrenci:</b> ${student.name}</p>
-                        <div style="display: flex; gap: 10mm; justify-content: space-between;">
-                            <div style="flex: 1;">
-                                <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 4mm;">1. Konuşma Sınavı (Toplam: ${sinav1_total})</h3>
-                                <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
-                                    <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Maks.</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Puan</th></tr></thead>
-                                    <tbody>${scoreRows(sinav1_scores)}</tbody>
-                                </table>
+                    htmlContent += `<div class="pdf-page-break" style="padding: 15mm; box-sizing: border-box; width: 210mm; height: 297mm; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="text-align: center; margin-bottom: 8mm;">
+                                <h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
+                                <h2 style="font-size: 14px;">${activeClass.name} Sınıfı ${semester}. Dönem 9. Sınıf Konuşma Sınavı Detay Raporu</h2>
                             </div>
-                            <div style="flex: 1;">
-                                <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 4mm;">2. Konuşma Sınavı (Toplam: ${sinav2_total})</h3>
-                                <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
-                                    <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Maks.</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Puan</th></tr></thead>
-                                    <tbody>${scoreRows(sinav2_scores)}</tbody>
-                                </table>
+                            <p style="font-size: 12px; margin-bottom: 8mm;"><b>Öğrenci:</b> ${student.name}</p>
+                            
+                            <div style="font-size: 9px; margin-bottom: 5mm; padding: 5px 10px; border: 1px solid #e0e7ff; background-color: #f0f4ff; border-radius: 4px;">
+                                <h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 10px; color: #3b82f6;">Kriter Açıklamaları:</h4>
+                                <ul style="list-style-type: none; padding-left: 0; margin: 0;">${criteriaNotes}</ul>
+                            </div>
+
+                            <div style="display: flex; gap: 10mm; justify-content: space-between;">
+                                <div style="flex: 1;">
+                                    <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 4mm;">1. Konuşma Sınavı (Toplam: ${sinav1_total})</h3>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+                                        <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Maks.</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Puan</th></tr></thead>
+                                        <tbody>${scoreRows(sinav1_scores)}</tbody>
+                                    </table>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 4mm;">2. Konuşma Sınavı (Toplam: ${sinav2_total})</h3>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+                                        <thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Kriter</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Maks.</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 15%;">Puan</th></tr></thead>
+                                        <tbody>${scoreRows(sinav2_scores)}</tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                         <div style="position: absolute; bottom: 15mm; right: 15mm; font-size: 10px; text-align: right;">
+                        <div style="font-size: 10px; text-align: right; border-top: 1px solid #eee; padding-top: 5px;">
                             <p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'} (${settings.branchName || 'Branş'})</p>
                         </div>
                     </div>`;
@@ -1065,81 +1095,100 @@
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
                 
+                // Yatay (Landscape) Rapor ayarları
                 const students = activeClass.students;
-                const studentsPerPage = 14; // Sayfa başına düşen öğrenci sayısı azaltıldı
+                const studentsPerPage = 14; // Yatayda 8 kriter ve ortalama sütunları için güvenlik sınırını 14'e düşürdük
                 const numPages = Math.ceil(students.length / studentsPerPage);
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
+
                 const criteriaKeys = Object.keys(SPEAKING_EXAM_9TH_CRITERIA);
                 
                 const reportContainer = document.createElement('div');
                 reportContainer.style.position = 'absolute';
                 reportContainer.style.left = '-9999px';
-                reportContainer.style.width = '297mm'; // Yatay A4
+                reportContainer.style.width = '297mm'; // Yatay A4 genişliği
                 reportContainer.style.backgroundColor = 'white';
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
 
-                const criteriaHeaders = (examNum) => criteriaKeys.map((key, i) => `<th style="border: 1px solid #333; padding: 4px; font-size: 8px;">Krit. ${i+1} (${examNum})</th>`).join('');
+                // Kriter başlıkları (Krit. 1 (10), Krit. 2 (10) vb.)
+                const criteriaHeaders = (examNum) => criteriaKeys.map((key, index) => {
+                    const max = SPEAKING_EXAM_9TH_CRITERIA[key].max;
+                    return `<th style="border: 1px solid #333; padding: 4px; font-size: 8px; font-weight: bold; width: 5%;">${index + 1} (${max})</th>`;
+                }).join('');
 
-                const criteriaNotes = Object.entries(SPEAKING_EXAM_9TH_CRITERIA).map(([key, { label, max }], i) => `<li><b>Krit. ${i+1}:</b> ${label} (Maks: ${max})</li>`).join('');
-                
-                let studentPagesHtml = '';
+                // Kriter açıklamaları (Sayfanın Üstünde Görünmesi İçin)
+                const criteriaNotesHtml = `<div style="font-size: 9px; margin-top: 5mm; margin-bottom: 5mm; padding: 5px 10px; border: 1px solid #e0e7ff; background-color: #f0f4ff; border-radius: 4px;"><h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 10px; color: #3b82f6;">Kriter Açıklamaları:</h4><ul style="list-style-type: none; padding-left: 0; margin: 0;">${criteriaKeys.map((key, index) => `<li style="margin-bottom: 2px;"><b>Krit. ${index + 1}:</b> ${SPEAKING_EXAM_9TH_CRITERIA[key].label} (Maks: ${SPEAKING_EXAM_9TH_CRITERIA[key].max} Puan)</li>`).join('')}</ul></div>`;
+
+
+                let htmlContent = '';
+
                 for (let i = 0; i < numPages; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    
                     const summaryRows = studentChunk.map((student, index) => {
+                        const scores1 = student.speakingExams9th?.[donemKey]?.sinav1 || {};
+                        const scores2 = student.speakingExams9th?.[donemKey]?.sinav2 || {};
+
+                        const totalScore1 = Object.values(scores1).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                        const totalScore2 = Object.values(scores2).reduce((sum, score) => sum + (Number(score) || 0), 0);
+                        const ortalama = (totalScore1 > 0 || totalScore2 > 0) ? Math.round((totalScore1 + totalScore2) / ((totalScore1 > 0 ? 1 : 0) + (totalScore2 > 0 ? 1 : 0))) : 0;
+                        
+                        const scoreCells1 = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${scores1[key] !== null && scores1[key] !== undefined ? scores1[key] : '-'}</td>`).join('');
+                        const scoreCells2 = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${scores2[key] !== null && scores2[key] !== undefined ? scores2[key] : '-'}</td>`).join('');
+
                         const globalIndex = i * studentsPerPage + index + 1;
-                        const sinav1_scores = student.speakingExams9th[donemKey]?.sinav1 || {};
-                        const sinav2_scores = student.speakingExams9th[donemKey]?.sinav2 || {};
-                        const sinav1_total = Object.values(sinav1_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                        const sinav2_total = Object.values(sinav2_scores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-                        const ortalama = Math.round((sinav1_total + sinav2_total) / 2);
-
-                        const sinav1_cells = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${sinav1_scores[key] ?? '-'}</td>`).join('');
-                        const sinav2_cells = criteriaKeys.map(key => `<td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${sinav2_scores[key] ?? '-'}</td>`).join('');
-
-                        return `<tr style="text-align: center;">
-                            <td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${globalIndex}</td>
-                            <td style="border: 1px solid #333; padding: 4px; text-align: left; font-size: 8px;">${student.name}</td>
-                            ${sinav1_cells}<td style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #90cdf4;"><b>${sinav1_total}</b></td>
-                            ${sinav2_cells}<td style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #fdbb74;"><b>${sinav2_total}</b></td>
-                            <td style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #b2f5ea;"><b>${ortalama}</b></td>
-                        </tr>`;
+                        return `<tr style="${globalIndex % 2 === 0 ? 'background-color: #f7f7f7;' : ''}"><td style="border: 1px solid #333; padding: 4px; font-size: 8px;">${globalIndex}</td><td style="border: 1px solid #333; padding: 4px; text-align: left; font-size: 8px;">${student.name}</td>${scoreCells1}<td style="border: 1px solid #333; padding: 4px; font-weight: bold; font-size: 8px; background-color: #90cdf4;">${totalScore1}</td>${scoreCells2}<td style="border: 1px solid #333; padding: 4px; font-weight: bold; font-size: 8px; background-color: #fdbb74;">${totalScore2}</td><td style="border: 1px solid #333; padding: 4px; font-weight: bold; font-size: 8px; background-color: #b2f5ea;">${ortalama}</td></tr>`;
                     }).join('');
 
-                    const footerHtml = (i === numPages - 1) ? `<div style="position: absolute; bottom: 15mm; right: 15mm; font-size: 10px; text-align: right;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'} (${settings.branchName || 'Branş'})</p></div>` : '';
-                    studentPagesHtml += `<div class="pdf-page-break" style="box-sizing: border-box; width: 297mm; height: 210mm; padding: 15mm; position: relative;">
-                        <div>
+                    // Sadece son sayfada görünen imza ve boşluk kontrolü
+                    // Dikey boşluk (height: 20mm) ekleyerek imzanın içeriğe yapışmasını engelliyoruz
+                    const footerHtml = (i === numPages - 1) 
+                        ? `<div style="height: 20mm; display: flex; flex-direction: column; justify-content: flex-end; text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen Adı'} (${settings.branchName || 'Branş'})</p></div>`
+                        : ''; // Diğer sayfalarda footer yok
+
+                    htmlContent += `<div class="pdf-page-break" style="box-sizing: border-box; width: 297mm; height: 210mm; padding: 15mm; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="flex-grow: 1;">
                             <div style="text-align: center; margin-bottom: 5mm;">
                                 <h1 style="font-size: 18px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
                                 <h2 style="font-size: 15px;">${activeClass.name} Sınıfı ${semester}. Dönem 9. Sınıf Konuşma Sınavları Özet Raporu (Sayfa ${i + 1}/${numPages})</h2>
                             </div>
-                            <!-- KRİTER AÇIKLAMALARI BURADA BAŞLIYOR -->
-                            <div style="font-size: 9px; margin-bottom: 10mm; padding: 5px; border: 1px solid #ddd; background-color: #fafafa;"><h4 style="font-weight: bold; margin-bottom: 3mm; font-size: 10px;">Kriter Açıklamaları:</h4><ul style="list-style-type: none; padding-left: 0; margin: 0; column-count: 2;">${criteriaNotes}</ul></div>
-                            <!-- KRİTER AÇIKLAMALARI BURADA BİTİYOR -->
+                            <!-- KRİTER AÇIKLAMALARI BAŞLANGIÇ -->
+                            ${criteriaNotesHtml}
+                            <!-- KRİTER AÇIKLAMALARI BİTİŞ -->
                             <h3 style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">Öğrenci Puanları</h3>
-                            <table style="width: 100%; border-collapse: collapse; text-align: center;">
-                                <thead>
-                                    <tr style="background-color: #f2f2f2;">
-                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; width: 2%; font-size: 8px;">No.</th>
-                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; width: 15%; text-align: left; font-size: 8px;">Öğrenci Adı</th>
-                                        <th colspan="${criteriaKeys.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #e0f2fe; font-size: 8px;">1. SINAV</th>
-                                        <th colspan="${criteriaKeys.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #ffedd5; font-size: 8px;">2. SINAV</th>
-                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; background-color: #b2f5ea; font-size: 8px;">DÖNEM ORT.</th>
-                                    </tr>
-                                    <tr style="background-color: #f2f2f2;">
-                                        ${criteriaHeaders(1)}<th style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #90cdf4;">TOP.</th>
-                                        ${criteriaHeaders(2)}<th style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #fdbb74;">TOP.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${summaryRows}</tbody>
-                            </table>
-                            <div style="height: 10px;"></div> {/* Tablo altına ekstra boşluk */}
+                            <div style="overflow-x: auto; max-width: 100%;">
+                                <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                                    <thead>
+                                        <tr style="background-color: #f2f2f2;">
+                                            <th rowspan="2" style="border: 1px solid #333; padding: 4px; width: 2%; font-size: 8px;">No.</th>
+                                            <th rowspan="2" style="border: 1px solid #333; padding: 4px; width: 15%; text-align: left; font-size: 8px;">Öğrenci Adı</th>
+                                            <th colspan="${criteriaKeys.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #e0f2fe; font-size: 8px;">1. SINAV</th>
+                                            <th colspan="${criteriaKeys.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #ffedd5; font-size: 8px;">2. SINAV</th>
+                                            <th rowspan="2" style="border: 1px solid #333; padding: 4px; background-color: #b2f5ea; font-size: 8px;">DÖNEM ORT.</th>
+                                        </tr>
+                                        <tr style="background-color: #f2f2f2;">
+                                            ${criteriaHeaders(1)}
+                                            <th style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #90cdf4;">TOP.</th>
+                                            ${criteriaHeaders(2)}
+                                            <th style="border: 1px solid #333; padding: 4px; font-size: 8px; background-color: #fdbb74;">TOP.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${summaryRows}
+                                        <!-- BU BOŞLUK SATIRI KESİLMEYİ ÖNLEMEK İÇİN AGRESİF ÇÖZÜMDÜR -->
+                                        ${Array(studentsPerPage - studentChunk.length).fill(0).map(() => 
+                                            `<tr><td style="height: 15px; border: none;" colspan="${4 + 2 * criteriaKeys.length + 1}">&nbsp;</td></tr>`
+                                        ).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         ${footerHtml}
                     </div>`;
                 }
 
-                reportContainer.innerHTML = studentPagesHtml; 
+                reportContainer.innerHTML = htmlContent;
                 document.body.appendChild(reportContainer);
 
                 const pages = Array.from(reportContainer.children);
