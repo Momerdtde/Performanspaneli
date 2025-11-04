@@ -301,7 +301,8 @@
                     <h2 class="text-2xl font-semibold mb-4 text-white">Veri Yönetimi</h2>
                     <button id="updateAllBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg mb-4">Tüm Film Bilgilerini Güncelle</button>
                     <div id="updateAllStatus" class="text-center text-sm text-gray-400 mb-4"></div>
-                    <button id="exportBtn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg">Listeyi Dışa Aktar (CSV)</button>
+                    <button id="exportBtn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg">İzlediklerimi Dışa Aktar (CSV)</button>
+                    <button id="exportDvdBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg mt-4">Koleksiyonu Dışa Aktar (CSV)</button>
                 </div>
             </div>
         </main>
@@ -436,6 +437,7 @@
             const watchlistContainer = document.getElementById('watchlistContainer');
             const watchlistCount = document.getElementById('watchlistCount');
             const exportBtn = document.getElementById('exportBtn');
+            const exportDvdBtn = document.getElementById('exportDvdBtn');
             const bulkAddBtn = document.getElementById('bulkAddBtn');
             const bulkAddTextarea = document.getElementById('bulkAddTextarea');
             const bulkAddStatus = document.getElementById('bulkAddStatus');
@@ -667,7 +669,7 @@
                                 <div class="space-y-1.5 mt-1">
                                     <button class="add-movie-btn w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1 px-2 text-xs rounded-lg" data-tmdb-id="${result.id}" data-title="${encodeURIComponent(result.title)}" data-poster-path="${result.poster_path || ''}" data-release-year="${releaseYear}">İzledim</button>
                                     <button class="add-to-watchlist-btn-from-search w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-2 text-xs rounded-lg" data-tmdb-id="${result.id}" data-title="${encodeURIComponent(result.title)}" data-poster-path="${result.poster_path || ''}" data-release-year="${releaseYear}">İzleme Listesi</button>
-                                    <button class="add-to-collection-btn-from-search w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 text-xs rounded-lg" data-tmdb-id="${result.id}" data-title="${encodeURIComponent(result.title)}" data-poster-path="${result.poster_path || ''}">Koleksiyona Ekle</button>
+                                    <button class="add-to-collection-btn-from-search w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 text-xs rounded-lg" data-tmdb-id="${result.id}" data-title="${encodeURIComponent(result.title)}" data-poster-path="${result.poster_path || ''}" data-release-year="${releaseYear}">Koleksiyona Ekle</button>
                                 </div>
                             </div>
                             <button class="info-movie-btn-from-search absolute top-2 right-2 p-1.5 bg-black bg-opacity-60 rounded-full text-white hover:bg-opacity-80" title="Film Bilgileri" data-tmdb-id="${result.id}">
@@ -820,11 +822,36 @@
                 const querySnapshot = await getDocs(q);
                 if (!querySnapshot.empty) { return { status: 'duplicate' }; }
                 
+                // --- START NEW CODE ---
+                // Fetch details to store director, cast, and year
+                const details = await getMovieDetails(dvdData.tmdbId);
+                let director = '';
+                let cast = [];
+                let releaseYear = dvdData.releaseYear || 'N/A'; // Use passed-in year
+
+                if (details) {
+                    if (!dvdData.releaseYear && details.release_date) { // Only override if not passed
+                        releaseYear = details.release_date.split('-')[0];
+                    }
+                    if (details.credits) {
+                        const crew = details.credits.crew;
+                        const directorObj = crew.find(p => p.job === 'Director');
+                        director = directorObj ? directorObj.name : '';
+                        cast = details.credits.cast.slice(0, 3).map(actor => actor.name);
+                    }
+                }
+                // --- END NEW CODE ---
+                
                 const dataToSave = {
                     title: decodeURIComponent(dvdData.title),
                     posterPath: dvdData.posterPath,
                     tmdbId: dvdData.tmdbId,
-                    addedAt: new Date()
+                    addedAt: new Date(),
+                    // --- ADD NEW FIELDS ---
+                    releaseYear: releaseYear,
+                    director: director,
+                    cast: cast
+                    // --- END ADD NEW FIELDS ---
                 };
 
                 try { 
@@ -1028,7 +1055,12 @@
             function filterAndDisplayDvds() {
                 const filterText = dvdFilterInput.value.toLocaleLowerCase('tr-TR');
                 const filteredDvds = dvdCollectionList.filter(dvd => {
-                    return dvd.title.toLocaleLowerCase('tr-TR').includes(filterText);
+                    // --- UPDATE LOGIC ---
+                    const titleMatch = dvd.title.toLocaleLowerCase('tr-TR').includes(filterText);
+                    const directorMatch = dvd.director ? dvd.director.toLocaleLowerCase('tr-TR').includes(filterText) : false;
+                    const castMatch = dvd.cast ? dvd.cast.some(actor => actor.toLocaleLowerCase('tr-TR').includes(filterText)) : false;
+                    return titleMatch || directorMatch || castMatch;
+                    // --- END UPDATE LOGIC ---
                 });
                 dvdListContainer.innerHTML = '';
                 if (filteredDvds.length > 0) {
@@ -1046,9 +1078,19 @@
             function exportToCSV() {
                 if (watchedMoviesList.length === 0) { showNotification("Dışa aktarılacak film yok.", true); return; }
                 let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += ["Baslik", "Yil", "Turler", "Notlar"].join(",") + "\r\n";
+                // --- UPDATE HEADERS ---
+                csvContent += ["Baslik", "Yil", "Yonetmen", "Turler", "Notlar"].join(",") + "\r\n";
+                // --- END UPDATE ---
                 watchedMoviesList.forEach(movie => {
-                    const row = [`"${movie.title.replace(/"/g, '""')}"`, movie.releaseYear, `"${movie.genres ? movie.genres.join(', ') : ''}"`, `"${movie.notes ? movie.notes.replace(/"/g, '""').replace(/\n/g, ' ') : ''}"`].join(",");
+                    // --- UPDATE ROW ---
+                    const row = [
+                        `"${movie.title.replace(/"/g, '""')}"`, 
+                        movie.releaseYear, 
+                        `"${movie.director ? movie.director.replace(/"/g, '""') : ''}"`,
+                        `"${movie.genres ? movie.genres.join(', ') : ''}"`, 
+                        `"${movie.notes ? movie.notes.replace(/"/g, '""').replace(/\n/g, ' ') : ''}"`
+                    ].join(",");
+                    // --- END UPDATE ---
                     csvContent += row + "\r\n";
                 });
                 const link = document.createElement("a");
@@ -1058,6 +1100,28 @@
                 link.click();
                 document.body.removeChild(link);
             }
+
+            // --- ADD NEW FUNCTION ---
+            function exportDvdToCSV() {
+                if (dvdCollectionList.length === 0) { showNotification("Dışa aktarılacak koleksiyon filmi yok.", true); return; }
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += ["Baslik", "Yil", "Yonetmen"].join(",") + "\r\n";
+                dvdCollectionList.forEach(dvd => {
+                    const row = [
+                        `"${dvd.title.replace(/"/g, '""')}"`, 
+                        dvd.releaseYear || 'N/A', 
+                        `"${dvd.director ? dvd.director.replace(/"/g, '""') : ''}"`
+                    ].join(",");
+                    csvContent += row + "\r\n";
+                });
+                const link = document.createElement("a");
+                link.setAttribute("href", encodeURI(csvContent));
+                link.setAttribute("download", "dvd_koleksiyonum.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            // --- END ADD NEW FUNCTION ---
 
             async function handleBulkAdd() {
                 const text = bulkAddTextarea.value.trim();
@@ -1135,7 +1199,7 @@
                 results.filter(r => r.media_type === 'movie').slice(0, 12).forEach(movie => {
                     const posterPath = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'https://placehold.co/500x750/1f2937/4b5563?text=Poster+Yok';
                     const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : 'N/A';
-                    const movieCard = `<div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg movie-card flex flex-col"><div class="w-full h-48 bg-gray-700 flex items-center justify-center"><img src="${posterPath}" alt="${movie.title}" class="w-full h-full object-contain" loading="lazy"></div><div class="p-3 flex flex-col flex-grow"><h3 class="font-bold text-sm text-white">${movie.title}</h3><p class="text-gray-400 text-xs mb-2">${releaseYear}</p><button class="add-dvd-btn mt-auto w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 text-sm rounded-lg" data-tmdb-id="${movie.id}" data-title="${encodeURIComponent(movie.title)}" data-poster-path="${movie.poster_path || ''}">Koleksiyona Ekle</button></div></div>`;
+                    const movieCard = `<div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg movie-card flex flex-col"><div class="w-full h-48 bg-gray-700 flex items-center justify-center"><img src="${posterPath}" alt="${movie.title}" class="w-full h-full object-contain" loading="lazy"></div><div class="p-3 flex flex-col flex-grow"><h3 class="font-bold text-sm text-white">${movie.title}</h3><p class="text-gray-400 text-xs mb-2">${releaseYear}</p><button class="add-dvd-btn mt-auto w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 text-sm rounded-lg" data-tmdb-id="${movie.id}" data-title="${encodeURIComponent(movie.title)}" data-poster-path="${movie.poster_path || ''}" data-release-year="${releaseYear}">Koleksiyona Ekle</button></div></div>`;
                     dvdSearchResultsContainer.innerHTML += movieCard;
                 });
             }
@@ -1299,6 +1363,7 @@
             dvdFilterInput.addEventListener('input', filterAndDisplayDvds);
             genreFilter.addEventListener('change', filterAndDisplayWatchedMovies);
             exportBtn.addEventListener('click', exportToCSV);
+            exportDvdBtn.addEventListener('click', exportDvdToCSV);
             bulkAddBtn.addEventListener('click', handleBulkAdd);
             updateAllBtn.addEventListener('click', async () => {
                 updateAllStatus.textContent = 'Güncelleme başladı...';
@@ -1435,7 +1500,8 @@
                     const dvdData = { 
                         tmdbId: addToCollectionFromSearchBtn.dataset.tmdbId, 
                         title: decodeURIComponent(addToCollectionFromSearchBtn.dataset.title), 
-                        posterPath: addToCollectionFromSearchBtn.dataset.posterPath 
+                        posterPath: addToCollectionFromSearchBtn.dataset.posterPath,
+                        releaseYear: addToCollectionFromSearchBtn.dataset.releaseYear
                     };
                     const result = await addDvdToFirestore(dvdData);
                     if (result.status === 'success') {
@@ -1451,7 +1517,12 @@
                     addDvdBtn.textContent = 'Eklendi';
                     addDvdBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
                     addDvdBtn.classList.add('bg-gray-500', 'cursor-not-allowed');
-                    const dvdData = { tmdbId: addDvdBtn.dataset.tmdbId, title: decodeURIComponent(addDvdBtn.dataset.title), posterPath: addDvdBtn.dataset.posterPath };
+                    const dvdData = { 
+                        tmdbId: addDvdBtn.dataset.tmdbId, 
+                        title: decodeURIComponent(addDvdBtn.dataset.title), 
+                        posterPath: addDvdBtn.dataset.posterPath,
+                        releaseYear: addDvdBtn.dataset.releaseYear
+                    };
                     const result = await addDvdToFirestore(dvdData);
                     if (result.status === 'success') showNotification(`"${dvdData.title}" koleksiyona eklendi!`, false);
                     else if (result.status === 'duplicate') showNotification(`"${dvdData.title}" zaten koleksiyonda!`, true);
