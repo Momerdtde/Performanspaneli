@@ -8,14 +8,13 @@
     <meta name="theme-color" content="#1e293b">
     <meta name="description" content="Öğretmenler için Öğrenci Performans Değerlendirme Paneli">
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.23.12/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- Firebase Kütüphaneleri -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -27,12 +26,10 @@
         .cool-title { font-family: 'Exo 2', sans-serif; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .teacher-info, .confirm-modal, .auth-form { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Tarayıcının varsayılan number input oklarını gizle */
         input[type='number']::-webkit-inner-spin-button, 
         input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type='number'] { -moz-appearance: textfield; }
         .pdf-page-break { page-break-after: always; }
-        /* Rapor içeriği için özel stil */
         .pdf-content-wrapper { display: flex; flex-direction: column; justify-content: space-between; min-height: 260mm; }
     </style>
 </head>
@@ -58,8 +55,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Raporlama Kriterleri
-        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
+        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ognot tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
         const PERFORMANCE_TASK_CRITERIA = { ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 }, plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 }, bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 }, kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 }, sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 }, materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 }, anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 }, kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 }, zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 } };
         const SPEAKING_EXAM_CRITERIA = {
             ifadeler: { label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.', max: 20 },
@@ -79,7 +75,6 @@
             zamanYonetimi: { label: "Zaman Yönetimi", max: 10, details: ["Konuşmayı verilen süre içerisinde tamamlamıştır."] }
         };
 
-        // Yardımcı Fonksiyon: 1. Performans Notu Hesaplama (%50 Ders İçi, %50 Yazmalar)
         const calculateWeightedPerf1 = (assessment) => {
             const d = assessment.dersIciDurum;
             const y1 = assessment.yazma1;
@@ -110,7 +105,6 @@
             return weightSum > 0 ? Math.round(score / weightSum) : null;
         };
 
-        // İkonlar
         const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
         const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
         const ArrowUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>;
@@ -405,7 +399,6 @@
                                         needsUpdate = true;
                                     }
 
-                                    // Senkronizasyon: Sözlü Notunu Ders İçi Duruma Yansıt
                                     if (student.scores && student.assessments) {
                                         const s1 = student.scores.donem1 || defaultScores;
                                         student.assessments.donem1.dersIciDurum = calculateScoreForSync(s1);
@@ -576,7 +569,6 @@
             // RAPORLAMA FONKSİYONLARI
             // =================================================================
 
-            // 9. Sınıf Konuşma Sınavı - Özet Rapor (Yatay - Sınav 1 & Sınav 2)
             const handleGenerateSpeakingExam9thSummaryReport = (semester) => {
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
@@ -665,7 +657,6 @@
                 processPage(0);
             };
 
-            // Standart Konuşma Sınavı - Özet Rapor (Yatay - Sınav 1 & Sınav 2)
             const handleGenerateSpeakingExamSummaryReport = (semester) => {
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
@@ -1260,7 +1251,6 @@
             );
         }
 
-        // Ana Uygulama Yöneticisi
         function App() {
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -1268,7 +1258,7 @@
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(user => {
                     setUser(user);
-                    setLoading(false);
+                    loading && setLoading(false);
                 });
                 return () => unsubscribe();
             }, []);
@@ -1284,4 +1274,3 @@
     </script>
 </body>
 </html>
- 
