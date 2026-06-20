@@ -8,13 +8,21 @@
     <meta name="theme-color" content="#1e293b">
     <meta name="description" content="Öğretmenler için Öğrenci Performans Değerlendirme Paneli">
     
-    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone@7.23.12/babel.min.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    
+    <!-- React Kütüphaneleri -->
+    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel (Kesin çalışan stabil jsDelivr Sürümü) -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.20/babel.min.js"></script>
+
+    <!-- PDF Kütüphaneleri -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+    <!-- Firebase Kütüphaneleri -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -55,7 +63,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ognot tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
+        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
         const PERFORMANCE_TASK_CRITERIA = { ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 }, plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 }, bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 }, kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 }, sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 }, materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 }, anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 }, kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 }, zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 } };
         const SPEAKING_EXAM_CRITERIA = {
             ifadeler: { label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.', max: 20 },
@@ -434,7 +442,6 @@
                 return () => clearTimeout(handler);
             }, [classes, settings, user, isLoading, activeView]);
 
-
             useEffect(() => {
                 if ((activeView === 'assessments' || activeView === 'speaking-exam' || activeView === 'speaking-exam-9th') && activeClass) {
                     setTempClassData(JSON.parse(JSON.stringify(activeClass)));
@@ -565,10 +572,6 @@
                 });
             }, []);
             
-            // =================================================================
-            // RAPORLAMA FONKSİYONLARI
-            // =================================================================
-
             const handleGenerateSpeakingExam9thSummaryReport = (semester) => {
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
@@ -1258,7 +1261,7 @@
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged(user => {
                     setUser(user);
-                    loading && setLoading(false);
+                    setLoading(false);
                 });
                 return () => unsubscribe();
             }, []);
@@ -1274,4 +1277,3 @@
     </script>
 </body>
 </html>
- 
