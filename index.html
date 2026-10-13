@@ -37,11 +37,39 @@
     </style>
 </head>
 <body class="bg-slate-900 flex items-center justify-center min-h-screen p-2 sm:p-4">
-    <div id="root" class="w-full max-w-7xl"></div>
+    <div id="root" class="w-full max-w-7xl">
+        <div class="text-center text-slate-400 text-lg py-12 animate-pulse">Performans Paneli Yükleniyor...</div>
+    </div>
     
     <script type="text/babel" data-presets="react">
-        const { useState, useEffect, Fragment, useCallback, memo } = React;
+        const { useState, useEffect, Fragment, useCallback, memo, Component } = React;
         
+        class ErrorBoundary extends Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            componentDidCatch(error, errorInfo) {
+                console.error("Uygulama Hatası:", error, errorInfo);
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="bg-slate-800 border border-red-500 rounded-xl p-6 text-white max-w-xl mx-auto my-10 shadow-2xl">
+                            <h2 className="text-2xl font-bold text-red-400 mb-3">Bir Hata Oluştu</h2>
+                            <p className="text-slate-300 text-sm mb-4">Uygulama yüklenirken beklenmeyen bir veri hatası oluştu:</p>
+                            <pre className="bg-slate-900 p-3 rounded text-xs text-red-300 overflow-x-auto mb-4">{String(this.state.error)}</pre>
+                            <button onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Sayfayı Yenile</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
         // Firebase yapılandırması
         const firebaseConfig = {
             apiKey: "AIzaSyBn2f7sG_tb4AoCtx0AR1d3rw9OfhiW0Hc",
@@ -482,7 +510,7 @@
                 const checkScrollTop = () => {
                     if (!showScrollTop && window.pageYOffset > 400){
                         setShowScrollTop(true);
-                    } else if (showScrollTop && window.pageYOffset <= 400){
+                    } else if (showScrollTop && !(window.pageYOffset > 400)){
                         setShowScrollTop(false);
                     }
                 };
@@ -722,7 +750,7 @@
                 const criteriaHeaders = () => criteriaKeys.map((key, i) => `<th style="border: 1px solid #333; padding: 3px; font-size: 8px; width: 4%;">K.${i + 1}<br/><span style="font-size:6px; font-weight:normal;">(${SPEAKING_EXAM_9TH_CRITERIA[key].max}p)</span></th>`).join('');
                 const criteriaNotes = criteriaKeys.map((key, i) => `<div style="margin-bottom: 2px;"><b>K.${i + 1} - ${SPEAKING_EXAM_9TH_CRITERIA[key].label} (${SPEAKING_EXAM_9TH_CRITERIA[key].max}p):</b> ${SPEAKING_EXAM_9TH_CRITERIA[key].details.join(' ')}</div>`).join('');
 
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const summaryRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -924,7 +952,7 @@
                 const criteriaHeaders = () => criteriaKeys.map((key, i) => `<th style="border: 1px solid #333; padding: 3px; font-size: 8px; width: 5%;">K.${i + 1}<br/><span style="font-size:6px; font-weight:normal;">(20p)</span></th>`).join('');
                 const criteriaNotes = criteriaKeys.map((key, i) => `<div style="margin-bottom: 2px;"><b>K.${i + 1} (20 Puan):</b> ${SPEAKING_EXAM_CRITERIA[key].label}</div>`).join('');
 
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const summaryRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -1116,7 +1144,7 @@
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
                 let htmlContent = '';
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const studentRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -1166,7 +1194,7 @@
                 const summaryPages = Math.ceil(students.length / summaryPerPage) || 1;
                 let htmlContent = '';
 
-                for (let i = 0; i < summaryPages; i++) {
+                for (let i = 0; summaryPages > i; i++) {
                     const chunk = students.slice(i * summaryPerPage, (i + 1) * summaryPerPage);
                     htmlContent += `<div class="pdf-page-break" style="padding: 20mm; box-sizing: border-box; width: 210mm; height: 297mm;"><div class="pdf-content-wrapper"><div><div style="text-align: center; margin-bottom: 8mm;"><h1 style="font-size: 18px; font-weight: bold; margin: 0;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 16px; margin: 5px 0;">${activeClass.name} Sınıfı Performans Raporu</h2><p style="font-size: 12px;">${settings.teacherName || 'Öğretmen'} - ${settings.branchName || 'Branş'}</p></div><h3 style="font-size: 14px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2mm; margin-bottom: 5mm;">Genel Not Özeti (Sayfa ${i + 1}/${summaryPages})</h3><table style="width: 100%; border-collapse: collapse; font-size: 10px;"><thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">No.</th><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Öğrenci Adı</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Sözlü Notu</th></tr></thead><tbody>${chunk.map((student, idx) => `<tr><td style="border: 1px solid #ddd; padding: 6px;">${i * summaryPerPage + idx + 1}</td><td style="border: 1px solid #ddd; padding: 6px; text-align: left;">${student.studentNumber ? `<b>${student.studentNumber}</b> - ` : ''}${student.name}</td><td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${calculateGrade(student)}</td></tr>`).join('')}</tbody></table></div><div></div></div></div>`;
                 }
@@ -1214,7 +1242,7 @@
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
                 let htmlContent = '';
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const studentRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -1269,7 +1297,7 @@
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
                 let htmlContent = '';
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const studentRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -1326,7 +1354,7 @@
                 reportContainer.style.fontFamily = 'sans-serif';
                 reportContainer.style.color = 'black';
                 let htmlContent = '';
-                for (let i = 0; i < numPages; i++) {
+                for (let i = 0; numPages > i; i++) {
                     const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
                     const studentRows = studentChunk.map((student, index) => {
                         const globalIndex = i * studentsPerPage + index + 1;
@@ -1369,7 +1397,7 @@
                 if (matchTwoNums) {
                     const n1 = parseInt(matchTwoNums[1], 10);
                     const n2 = parseInt(matchTwoNums[2], 10);
-                    const schoolNo = (n1 <= 60 && n2 > n1) ? String(n2) : String(n1);
+                    const schoolNo = (60 >= n1 && n2 > n1) ? String(n2) : String(n1);
                     return { studentNumber: schoolNo, name: matchTwoNums[3].trim() };
                 }
                 const matchSingleNum = trimmed.match(/^(\d+)\s*[.\-–]?\s*(.+)$/);
@@ -1391,7 +1419,7 @@
                     'CE-OKUL', 'E-OKUL', 'BAŞARISIZ', 'GİRİLMEMİŞ', 'SAAT', 'ŞUBESİ', 'SIRA', 'Y1', 'Y2'
                 ];
 
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                for (let pageNum = 1; pdf.numPages >= pageNum; pageNum++) {
                     const page = await pdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
                     
@@ -1401,7 +1429,7 @@
                         if (!str) return;
                         const x = item.transform[4];
                         const y = item.transform[5];
-                        let row = rows.find(r => Math.abs(r.y - y) <= 4);
+                        let row = rows.find(r => 4 >= Math.abs(r.y - y));
                         if (!row) {
                             row = { y, items: [] };
                             rows.push(row);
@@ -1427,9 +1455,9 @@
 
                             if (name.split(/\s+/).length >= 2) {
                                 let schoolNumber = num1;
-                                if (num1 <= 60 && num2 > num1) {
+                                if (60 >= num1 && num2 > num1) {
                                     schoolNumber = num2;
-                                } else if (num2 <= 60 && num1 > num2) {
+                                } else if (60 >= num2 && num1 > num2) {
                                     schoolNumber = num1;
                                 } else {
                                     schoolNumber = Math.max(num1, num2);
@@ -1600,7 +1628,7 @@
 
             const handleSaveNote = (studentId, newNote) => { setClasses(prev => prev.map(c => { if (c.id !== activeClassId) return c; return { ...c, students: c.students.map(s => s.id === studentId ? { ...s, notes: newNote } : s )}; })); setEditingNoteStudent(null); };
             const handleUndoLastAction = () => { if (!lastAction) return; const { studentId, scoreType, classId } = lastAction; let studentName = ''; setClasses(prev => prev.map(c => { if (c.id !== classId) return c; return { ...c, students: c.students.map(s => { if (s.id === studentId && s.scores[scoreType] > 0) { studentName = s.name; return { ...s, scores: { ...s.scores, [scoreType]: s.scores[scoreType] - 1 } }; } return s; })}; })); setUndoMessage(`${studentName} isimli öğrencinin son puanı geri alındı.`); setLastAction(null); setTimeout(() => setUndoMessage(''), 3000); };
-            const distributeScores = (totalScore, criteria) => { let distributed = {}; let currentTotal = 0; const scoresWithDiff = Object.entries(criteria).map(([key, { max }]) => { const rawScore = (totalScore / 100) * max; const roundedScore = Math.round(rawScore); currentTotal += roundedScore; return { key, max, rounded: roundedScore, diff: roundedScore - rawScore }; }); let difference = totalScore - currentTotal; scoresWithDiff.sort((a, b) => a.diff - b.diff); while (difference !== 0) { for (const item of scoresWithDiff) { if (difference === 0) break; if (difference > 0 && item.rounded < item.max) { item.rounded++; difference--; } else if (difference < 0 && item.rounded > 0) { item.rounded--; difference++; } } } scoresWithDiff.forEach(item => { distributed[item.key] = item.rounded; }); return distributed; };
+            const distributeScores = (totalScore, criteria) => { let distributed = {}; let currentTotal = 0; const scoresWithDiff = Object.entries(criteria).map(([key, { max }]) => { const rawScore = (totalScore / 100) * max; const roundedScore = Math.round(rawScore); currentTotal += roundedScore; return { key, max, rounded: roundedScore, diff: roundedScore - rawScore }; }); let difference = totalScore - currentTotal; scoresWithDiff.sort((a, b) => a.diff - b.diff); while (difference !== 0) { for (const item of scoresWithDiff) { if (difference === 0) break; if (difference > 0 && item.max > item.rounded) { item.rounded++; difference--; } else if (0 > difference && item.rounded > 0) { item.rounded--; difference++; } } } scoresWithDiff.forEach(item => { distributed[item.key] = item.rounded; }); return distributed; };
             
             const NoteModal = ({ student, onSave, onClose }) => {
                 const [note, setNote] = useState(student.notes || '');
@@ -1877,7 +1905,7 @@
             return user ? <PerformancePanel user={user} /> : <AuthScreen />;
         }
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        ReactDOM.render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('root'));
     </script>
 </body>
 </html>
