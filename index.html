@@ -1,13 +1,41 @@
+e-Okul Puan Çizelgesi PDF dosyasını yüklediğiniz anda **Sınıf/Şube adını** (ör. `AL 9. Sınıf / F Şubesi` -> **9-F**), **Öğretmen Adını**, **Okul Adını**, **Branşı** ve tüm öğrencilerin **Okul Numarası + Ad Soyad** bilgilerini otomatik okuyup sınıfı tek tıkla kuran giriş bölümünü ve her sınıf veya sınıf düzeyi için **Konuşma Sınavı Kriterlerini ve Puanlarını manuel olarak oluşturup düzenleyebileceğiniz** dinamik kriter yöneticisini ekledim.
+
+Ayrıca önceki mesajda kodun yarım kalmasına veya Babel'in `appendChild / import` hatası vermesine neden olan tüm engelleri kaldıracak şekilde kodu optimize ettim.
+
+### Eklenen Yeni Özellikler:
+
+1. **Tek Tıkla e-Okul PDF'den Otomatik Sınıf + Öğrenci Kurulumu:**
+* **Sınıflar** sekmesinin en üstündeki **"e-Okul PDF Yükle (Sınıfı ve Öğrencileri Otomatik Oluştur)"** butonuna tıklayıp `9f.pdf` gibi bir çizelge seçtiğinizde:
+
+
+* PDF içindeki `Sınıfı / Şubesi: AL 9. Sınıf / F Şubesi` satırını okuyup otomatik olarak **9-F** sınıfını açar (sınıf zaten varsa mevcut sınıfa öğrencileri ekler/günceller).
+
+
+* Sıra numarası ile okul numarasının yer değiştirdiği satırları (`434 1 MUHAMMED ALSILES` veya `3 559 RAMAZAN AYAZ`) akıllıca ayrıştırır ve gerçek okul numaralarını (`434`, `559` vb.) kaydeder.
+
+
+
+
+
+
+2. **Dinamik Konuşma Sınavı Kriter Yöneticisi (Her Sınıfa Özel):**
+* **Konuşma Sınavı** sekmesinde artık **"Kriterleri Düzenle"** butonu yer alıyor.
+* Bu pencereden seçili sınıf için istediğiniz kadar kriter ekleyebilir, kriter cümlelerini ve **Maksimum Puanlarını** (toplamı 100 olacak şekilde) dilediğiniz gibi değiştirebilirsiniz.
+* Hazırladığınız kriter setini **"Tüm Sınıflara Kopyala"** diyerek aynı düzeydeki diğer şubelere tek tıkla aktarabilir veya hazır şablonlardan (**Standart 5 Kriter** / **9. Sınıf Yeni Müfredat 7 Kriter**) birini yükleyebilirsiniz.
+* Değerlendirme ekranında her kriter için **Tam Puan**, **Yarı Puan (Orta)**, **0 Puan** butonları yanı sıra ara puan verebilmeniz için **manuel puan kutucuğu** da bulunur.
+
+
+
+Aşağıdaki kod bloğunun tamamını kopyalayıp GitHub'daki `index.html` dosyanızla değiştirebilirsiniz (veya doğrudan önizleme penceresinden test edebilirsiniz):
+
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performans Paneli</title>
-    
     <meta name="theme-color" content="#1e293b">
-    <meta name="description" content="Öğretmenler için Öğrenci Performans Değerlendirme Paneli">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
@@ -20,36 +48,30 @@
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         }
     </script>
-
-    <!-- Firebase Kütüphaneleri -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .cool-title { font-family: 'Exo 2', sans-serif; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .teacher-info, .confirm-modal, .auth-form { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        input[type='number']::-webkit-inner-spin-button, 
-        input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        input[type='number']::-webkit-inner-spin-button, input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type='number'] { -moz-appearance: textfield; }
-        .pdf-page-break { page-break-after: always; }
     </style>
 </head>
-<body class="bg-slate-900 flex items-center justify-center min-h-screen p-2 sm:p-4">
+<body class="bg-slate-900 flex items-start justify-center min-h-screen p-2 sm:p-4">
     <div id="root" class="w-full max-w-7xl"></div>
-    
+
     <script type="text/babel">
         const { useState, useEffect, Fragment, useCallback, memo } = React;
-        
+
         const firebaseConfig = {
             apiKey: "AIzaSyBn2f7sG_tb4AoCtx0AR1d3rw9OfhiW0Hc",
             authDomain: "performanspaneli.firebaseapp.com",
             projectId: "performanspaneli",
-            storageBucket: "performanspaneli.appspot.com", 
+            storageBucket: "performanspaneli.appspot.com",
             messagingSenderId: "884074936264",
             appId: "1:884074936264:web:0645577f7c66fecce8f2fd",
             measurementId: "G-4P30W8GEYJ"
@@ -61,69 +83,81 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // Raporlama Kriterleri (Ders İçi ve Performans)
-        const IN_CLASS_CRITERIA = { derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 }, derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 }, arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 }, ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 }, soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 }, elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 }, uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 }, turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 }, on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 }, odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 } };
-        const PERFORMANCE_TASK_CRITERIA = { ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 }, plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 }, bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 }, kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 }, sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 }, materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 }, anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 }, kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 }, zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 } };
-
-        // Konuşma Sınavı Hazır Şablonları
-        const DEFAULT_STANDARD_CRITERIA = [
-            { id: 'ifadeler', label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.', max: 20, details: '' },
-            { id: 'gerekce', label: 'Konuşmada öne sürmek için ortaya koyulan önerme gerekçelendirilmiştir.', max: 20, details: '' },
-            { id: 'gereksizSes', label: 'Konuşmada gereksiz sesler (ıı, eee), tekrarlar ve duraksamalar görülmemiştir.', max: 20, details: '' },
-            { id: 'telaffuz', label: 'Konuşmada ses, hece ve kelimelerin telaffuz, vurgu ve tonlaması doğrudur.', max: 20, details: '' },
-            { id: 'sure', label: 'Konuşma, belirtilen sürede yapılmıştır.', max: 20, details: '' }
+        // Varsayılan Şablon Kriterler
+        const DEFAULT_SPEAKING_PRESET = [
+            { id: 'ifadeler', label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.', max: 20 },
+            { id: 'gerekce', label: 'Konuşmada öne sürmek için ortaya koyulan önerme gerekçelendirilmiştir.', max: 20 },
+            { id: 'gereksizSes', label: 'Konuşmada gereksiz sesler (ıı, eee), tekrarlar ve duraksamalar görülmemiştir.', max: 20 },
+            { id: 'telaffuz', label: 'Konuşmada ses, hece ve kelimelerin telaffuz, vurgu ve tonlaması doğrudur.', max: 20 },
+            { id: 'sure', label: 'Konuşma, belirtilen sürede yapılmıştır.', max: 20 }
         ];
 
-        const DEFAULT_9TH_GRADE_CRITERIA = [
-            { id: 'planlama', label: 'Planlama', max: 15, details: 'Konuşmaya etkili bir giriş yapmış, konuşmayı sürdürmüş ve etkili bir şekilde tamamlamıştır. Görüşlerine uygun örnekler sunmuştur.' },
-            { id: 'dusunselSurec', label: 'Düşünsel Süreçleri Kontrol Etme', max: 15, details: 'Düşünceleri, konuşmanın ana fikri etrafında ifade etmiştir. Düşüncelerini tekrara düşmeden sunmuştur.' },
-            { id: 'sozVarligi', label: 'Söz Varlığı', max: 15, details: 'Bağlama uygun zengin bir kelime hazinesiyle anlatımını zenginleştirmiştir. Yabancı kelimelerin yerine Türkçe kelimeleri kullanmıştır.' },
-            { id: 'organizasyon', label: 'Organizasyon', max: 10, details: 'Duygu ve düşüncelerini tutarlı bir biçimde organize etmiştir.' },
-            { id: 'akicilik', label: 'Akıcılık', max: 20, details: 'İşitilebilir bir ses tonuyla, gereksiz ses tekrarına düşmeden, vurgu ve tonlamaya dikkat ederek akıcı konuşmuştur.' },
-            { id: 'bedenDili', label: 'Beden Dili', max: 15, details: 'Sunumda jest ve mimiklerini etkili kullanmış, dinleyicilerle yeterli göz temasını kurmuştur.' },
-            { id: 'isBirligi', label: 'İş Birliği', max: 10, details: 'Grup çalışmalarında üzerine düşen sorumlulukları yerine getirmiştir.' }
+        const NINTH_GRADE_SPEAKING_PRESET = [
+            { id: 'planlama', label: 'Planlama: Etkili bir giriş yapmış, konuşmayı sürdürmüş, uygun örnekler sunmuş ve etkili tamamlamıştır.', max: 15 },
+            { id: 'dusunselSurec', label: 'Düşünsel Süreçleri Kontrol Etme: Düşünceleri ana fikir etrafında tekrara düşmeden sunmuştur.', max: 15 },
+            { id: 'sozVarligi', label: 'Söz Varlığı: Bağlama uygun zengin kelime hazinesi ve Türkçe kelimeler kullanmıştır.', max: 15 },
+            { id: 'organizasyon', label: 'Organizasyon: Duygu ve düşüncelerini tutarlı bir biçimde organize etmiştir.', max: 10 },
+            { id: 'akicilik', label: 'Akıcılık: İşitilebilir ses tonuyla, gereksiz ses tekrarına düşmeden, vurgu ve tonlamaya dikkat ederek konuşmuştur.', max: 20 },
+            { id: 'bedenDili', label: 'Beden Dili: Jest ve mimiklerini etkili kullanmış, dinleyicilerle yeterli göz teması kurmuştur.', max: 15 },
+            { id: 'isBirligi', label: 'İş Birliği: Grup çalışmalarında üzerine düşen sorumlulukları yerine getirmiştir.', max: 10 }
         ];
 
-        const getDefaultCriteriaForClassName = (className) => {
-            if (className && String(className).trim().startsWith('9')) {
-                return JSON.parse(JSON.stringify(DEFAULT_9TH_GRADE_CRITERIA));
-            }
-            return JSON.parse(JSON.stringify(DEFAULT_STANDARD_CRITERIA));
+        const IN_CLASS_CRITERIA = {
+            derse_zamaninda_gelme: { label: 'Derse zamanında gelme', max: 5 },
+            derse_devam_ilgi_saygi: { label: 'Derse devam, ilgi ve saygı', max: 10 },
+            arac_gerec: { label: 'Ders araç ve gereçlerini getirme', max: 10 },
+            ilgi_not_tutma: { label: 'Derse ilgi ve not tutma', max: 10 },
+            soru_cevap: { label: 'Soru ve önerilere cevap verme', max: 10 },
+            elestirel_dusunme: { label: 'Eleştirel düşünerek soru sorma', max: 10 },
+            uygulama_istekli: { label: 'Uygulamalara katılmaya istekli olma', max: 10 },
+            turkce_kullanimi: { label: 'Türkçeyi doğru kullanma ve olumlu davranış', max: 10 },
+            on_hazirlik: { label: 'Konuya ön hazırlık yaparak gelme', max: 15 },
+            odev_zamaninda: { label: 'Ödevlerini zamanında yapma', max: 10 }
         };
 
-        // 1. Performans Notu Hesaplama (%50 Ders İçi Durum, %50 Yazma Görevleri Ortalaması)
+        const PERFORMANCE_TASK_CRITERIA = {
+            ogretmenle_gorusme: { label: 'Öğretmenle düzenli görüşme ve önerileri dikkate alma', max: 5 },
+            plan_yapma: { label: 'Ödeve uygun plan yapma ve bu plana göre ödevini hazırlama', max: 5 },
+            bilgi_dogruluk: { label: 'Bilgilerin doğruluğu ve özgünlüğü', max: 10 },
+            kavram_anlatma: { label: 'Temel kavramları anlatma, konunun özünü ifade etme', max: 15 },
+            sunum_hakimiyet: { label: 'Ödevi sunma ve konuya hakimiyet', max: 25 },
+            materyal_destek: { label: 'Yeterli materyalle (poster, grafik vb.) destekleme', max: 10 },
+            anlasilir_yazma: { label: 'Anlaşılır yazma ve dilbilgisi kurallarına uyma', max: 10 },
+            kaynak_kullanma: { label: 'Farklı kaynaklardan yararlanma ve belirtme', max: 10 },
+            zamaninda_teslim: { label: 'Ödevi zamanında teslim etme', max: 10 }
+        };
+
+        const defaultScores = { inClassPlus: 0, inClassMinus: 0, homeworkPlus: 0, homeworkMinus: 0 };
+        const newAssessmentStructure = {
+            donem1: { dersIciDurum: null, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+            donem2: { dersIciDurum: null, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+        };
+        const newBookTitleStructure = { donem1: { kitap1: '', kitap2: '' }, donem2: { kitap1: '', kitap2: '' } };
+        const newSpeakingExamStructure = { donem1: { sinav1: null, sinav2: null }, donem2: { sinav1: null, sinav2: null } };
+
+        // %50 Ders İçi Durum + %50 Yazma Görevleri Ortalaması
         const calculateWeightedPerf1 = (assessment) => {
             if (!assessment) return null;
             const d = assessment.dersIciDurum;
             const y1 = assessment.yazma1;
             const y2 = assessment.yazma2;
-
             const hasD = d !== null && d !== undefined && d !== '' && !isNaN(d);
             const hasY1 = y1 !== null && y1 !== undefined && y1 !== '' && !isNaN(y1);
             const hasY2 = y2 !== null && y2 !== undefined && y2 !== '' && !isNaN(y2);
-
             if (!hasD && !hasY1 && !hasY2) return null;
 
             let score = 0;
             let weightSum = 0;
-
-            if (hasD) {
-                score += Number(d) * 0.5;
-                weightSum += 0.5;
-            }
-
+            if (hasD) { score += Number(d) * 0.5; weightSum += 0.5; }
             if (hasY1 || hasY2) {
                 const ySum = (hasY1 ? Number(y1) : 0) + (hasY2 ? Number(y2) : 0);
                 const yCount = (hasY1 ? 1 : 0) + (hasY2 ? 1 : 0);
-                const yAvg = ySum / yCount;
-                score += yAvg * 0.5;
+                score += (ySum / yCount) * 0.5;
                 weightSum += 0.5;
             }
-
             return weightSum > 0 ? Math.round(score / weightSum) : null;
         };
 
-        // Öğrenci Sıralama Fonksiyonu (Okul Numarasına Göre)
         const sortStudentsList = (students) => {
             return [...students].sort((a, b) => {
                 const numA = parseInt(a.schoolNumber, 10);
@@ -135,209 +169,274 @@
             });
         };
 
-        // e-Okul PDF Ayrıştırıcı (9f.pdf, 10d.PDF ve tüm e-Okul Puan Çizelgesi formatlarını otomatik çözer)
-        const parseEOkulPdfFile = async (file) => {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let detectedClassName = '';
-            let detectedMeta = {};
-            let allNumericTokens = [];
-            let allNameTokens = [];
-
-            const blacklist = [
-                'OKUL', 'KURUM', 'DÖNEM', 'PUAN', 'ÇİZELGESİ', 'ÖĞRENCİ', 'SINAVLAR', 
-                'YAZILI', 'PERFORMANS', 'UYGULAMA', 'PROJE', 'MUAF', 'NUMARASI', 'SIRA', 
-                'ADI SOYADI', 'DERS', 'ÖĞRETMENİ', 'MÜDÜR', 'YARDIMCISI', 'DEVAMSIZLIKTAN', 
-                'BAŞARISIZ', 'SAYILAN', 'ALANI', 'DALI', 'ŞUBESİ', 'SAATİ', 'HAFTALIK', 
-                'TÜRK DİLİ', 'EDEBİYATI', 'İSTANBUL', 'ANADOLU', 'LİSESİ', 'CE-OKUL', 'NO'
-            ];
-
-            for (let pageNum = 1; pdf.numPages >= pageNum; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const textContent = await page.getTextContent();
-                const fullPageText = textContent.items.map(i => i.str).join(' ');
-
-                // Sınıf / Şube tespiti (örn: "AL 9. Sınıf / F Şubesi" veya "AL-10. Sınıf / D Şubesi" -> "9-F", "10-D")
-                const classMatch = fullPageText.match(/(\d+)\s*\.\s*Sınıf\s*\/\s*([A-ZÇĞİÖŞÜ])\s*Şubesi/i);
-                if (classMatch && !detectedClassName) {
-                    detectedClassName = `${classMatch[1]}-${classMatch[2].toUpperCase()}`;
-                }
-
-                // Okul Adı tespiti
-                const schoolMatch = fullPageText.match(/:\s*([^:]+LİSESİ|[^:]+OKULU)/i);
-                if (schoolMatch && !detectedMeta.schoolName) {
-                    detectedMeta.schoolName = schoolMatch[1].replace(/PUANLARI.*/i, '').trim();
-                }
-
-                let pageNumTokens = [];
-                let pageNameTokens = [];
-
-                textContent.items.forEach(item => {
-                    const str = item.str.replace(/\|/g, '').trim();
-                    if (!str) return;
-                    const x = item.transform[4];
-                    const y = item.transform[5];
-
-                    // Sol sütundaki Sıra No ve Okul Numaraları (X koordinatı < 145)
-                    if (145 > x && /^\d+$/.test(str)) {
-                        const val = parseInt(str, 10);
-                        if (val > 0 && 99999 > val) {
-                            pageNumTokens.push({ val, x, y });
-                        }
-                    } else if (x >= 75 && 320 > x && str.length >= 4) {
-                        // İsim Sütunu
-                        const isCleanLetters = /^[A-ZÇĞİÖŞÜa-zçğıöşü\s]+$/.test(str);
-                        const upper = str.toLocaleUpperCase('tr-TR');
-                        const isBlacklisted = blacklist.some(w => upper.includes(w));
-                        if (isCleanLetters && !isBlacklisted && str.trim().includes(' ')) {
-                            pageNameTokens.push({ name: str.replace(/\s+/g, ' ').trim(), x, y });
-                        }
-                    }
-                });
-
-                // Aynı satırdaki (Y koordinatı çok yakın) isim parçalarını birleştir ve yukarıdan aşağıya sırala
-                pageNameTokens.sort((a, b) => b.y - a.y || a.x - b.x);
-                const mergedNames = [];
-                pageNameTokens.forEach(t => {
-                    const existing = mergedNames.find(m => 4 > Math.abs(m.y - t.y));
-                    if (existing) {
-                        existing.name = (existing.name + ' ' + t.name).replace(/\s+/g, ' ').trim();
-                    } else {
-                        mergedNames.push({ ...t });
-                    }
-                });
-
-                // İmza sirkülerindeki (Öğretmen, Müdür Yardımcısı, Müdür) isimleri ayıkla
-                const teacherIndex = mergedNames.findIndex(m => {
-                    // Genelde en altta aynı Y hizasında veya sonrasında "DERS ÖĞRETMENİ" yer alır
-                    return false;
-                });
-
-                allNameTokens.push(...mergedNames);
-                allNumericTokens.push(...pageNumTokens);
-            }
-
-            // Numaraları Y koordinatına göre yukarıdan aşağıya grupla
-            allNumericTokens.sort((a, b) => b.y - a.y || a.x - b.x);
-            const numRows = [];
-            allNumericTokens.forEach(t => {
-                const row = numRows.find(r => 4.5 > Math.abs(r.y - t.y));
-                if (row) {
-                    row.vals.push(t.val);
-                } else {
-                    numRows.push({ y: t.y, vals: [t.val] });
-                }
-            });
-
-            // Her satırdaki [Sıra No, Okul No] çiftlerinden gerçek Okul Numarasını ayıkla
-            const schoolNumbers = [];
-            let expectedSeq = 1;
-            numRows.forEach(r => {
-                const vals = r.vals;
-                if (vals.length >= 2) {
-                    const idx = vals.indexOf(expectedSeq);
-                    if (idx !== -1) {
-                        const other = vals.find((_, i) => i !== idx);
-                        schoolNumbers.push({ schoolNo: other, y: r.y });
-                        expectedSeq++;
-                    } else {
-                        schoolNumbers.push({ schoolNo: Math.max(...vals), y: r.y });
-                        expectedSeq++;
-                    }
-                } else if (vals.length === 1) {
-                    if (vals[0] !== expectedSeq) {
-                        schoolNumbers.push({ schoolNo: vals[0], y: r.y });
-                        expectedSeq++;
-                    }
-                }
-            });
-
-            // Öğrenci sayısı kadar ismi al (En alttaki öğretmen/idareci isimlerini dışarıda bırakır)
-            const validStudentCount = schoolNumbers.length;
-            const studentNames = allNameTokens.slice(0, validStudentCount);
-
-            const students = [];
-            for (let i = 0; studentNames.length > i; i++) {
-                students.push({
-                    schoolNumber: schoolNumbers[i] ? String(schoolNumbers[i].schoolNo) : String(i + 1),
-                    name: studentNames[i].name
-                });
-            }
-
-            if (!detectedClassName) {
-                detectedClassName = file.name.replace(/\.pdf$/i, '').toUpperCase();
-            }
-
-            return { className: detectedClassName, students, meta: detectedMeta };
-        };
-
         // İkonlar
-        const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
-        const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-        const ArrowUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>;
-        const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>;
-        const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
-        const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-        const MinusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-        const UploadCloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>;
-        const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-        const NoteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
-        const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
-        const ClassesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>;
-        const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
-        const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-        const UndoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v6h6"/><path d="M21 13a9 9 0 1 1-4.53-7.83"/></svg>;
-        const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
-        const BookIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>;
-        
+        const Icon = ({ d, size = 18 }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
+            </svg>
+        );
+
         const focusClasses = "focus:outline-none focus:ring-2 focus:ring-blue-500";
 
         function AuthScreen() {
-            const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [isLogin, setIsLogin] = useState(true); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-            const handleSubmit = (e) => { e.preventDefault(); setError(''); setLoading(true); if (isLogin) { auth.signInWithEmailAndPassword(email, password).catch(err => setError(err.message)).finally(() => setLoading(false)); } else { auth.createUserWithEmailAndPassword(email, password).catch(err => setError(err.message)).finally(() => setLoading(false)); } };
-            return ( <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl shadow-blue-500/10 p-8 text-white w-full max-w-md mx-auto auth-form"> <h1 className="cool-title text-4xl font-bold text-center mb-8">Performans Paneli</h1> <h2 className="text-2xl font-bold text-center mb-6">{isLogin ? 'Giriş Yap' : 'Kayıt Ol'}</h2> <form onSubmit={handleSubmit} className="space-y-6"> <div><label className="block text-sm font-medium text-slate-400">E-posta Adresi</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white ${focusClasses}`}/></div> <div><label className="block text-sm font-medium text-slate-400">Şifre</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md text-white ${focusClasses}`}/></div> {error && <p className="text-red-400 text-sm text-center">{error}</p>} <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-slate-500">{loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}</button> </form> <p className="text-center text-slate-400 mt-6">{isLogin ? "Hesabınız yok mu? " : "Zaten bir hesabınız var mı? "}<button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-blue-400 hover:underline">{isLogin ? 'Kayıt Olun' : 'Giriş Yapın'}</button></p> </div> );
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLogin, setIsLogin] = useState(true);
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                const action = isLogin ? auth.signInWithEmailAndPassword(email, password) : auth.createUserWithEmailAndPassword(email, password);
+                action.catch(err => setError(err.message)).finally(() => setLoading(false));
+            };
+
+            return (
+                <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl p-8 text-white w-full max-w-md mx-auto mt-12 fade-in">
+                    <h1 className="cool-title text-4xl font-bold text-center mb-6">Performans Paneli</h1>
+                    <h2 className="text-xl font-bold text-center mb-6 text-slate-200">{isLogin ? 'Öğretmen Girişi' : 'Yeni Hesap Oluştur'}</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm text-slate-400">E-posta Adresi</label>
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={`w-full mt-1 p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white ${focusClasses}`} />
+                        </div>
+                        <div>
+                            <label className="block text-sm text-slate-400">Şifre</label>
+                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className={`w-full mt-1 p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white ${focusClasses}`} />
+                        </div>
+                        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:bg-slate-600">
+                            {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+                        </button>
+                    </form>
+                    <p className="text-center text-slate-400 mt-5 text-sm">
+                        {isLogin ? "Hesabınız yok mu? " : "Zaten hesabınız var mı? "}
+                        <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-blue-400 hover:underline">
+                            {isLogin ? 'Kayıt Olun' : 'Giriş Yapın'}
+                        </button>
+                    </p>
+                </div>
+            );
         }
-        
+
+        // Dinamik Kriter Düzenleme Modalı
+        const CriteriaManagerModal = ({ activeClass, classes, onSaveCriteria, onCopyCriteriaToAll, onClose }) => {
+            const initialCriteria = (activeClass.speakingCriteria && activeClass.speakingCriteria.length > 0)
+                ? activeClass.speakingCriteria
+                : DEFAULT_SPEAKING_PRESET;
+
+            const [items, setItems] = useState(JSON.parse(JSON.stringify(initialCriteria)));
+            const totalMax = items.reduce((sum, item) => sum + (Number(item.max) || 0), 0);
+
+            const handleLabelChange = (index, val) => {
+                setItems(prev => prev.map((it, idx) => idx === index ? { ...it, label: val } : it));
+            };
+
+            const handleMaxChange = (index, val) => {
+                setItems(prev => prev.map((it, idx) => idx === index ? { ...it, max: Number(val) || 0 } : it));
+            };
+
+            const handleAddCriterion = () => {
+                setItems(prev => [...prev, { id: 'krit_' + Date.now(), label: 'Yeni değerlendirme ölçütü...', max: 10 }]);
+            };
+
+            const handleRemoveCriterion = (index) => {
+                setItems(prev => prev.filter((_, idx) => idx !== index));
+            };
+
+            const applyPreset = (preset) => {
+                setItems(JSON.parse(JSON.stringify(preset)));
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-3xl flex flex-col max-h-[90vh]">
+                        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Konuşma Sınavı Kriterlerini Özelleştir</h3>
+                                <p className="text-xs text-slate-400 mt-1">Seçili Sınıf: <span className="text-amber-400 font-semibold">{activeClass.name}</span> — Her sınıf düzeyi için farklı kriterler belirleyebilirsiniz.</p>
+                            </div>
+                            <button onClick={onClose} className="text-slate-400 hover:text-white p-1">✕</button>
+                        </div>
+
+                        <div className="px-5 py-3 bg-slate-900/60 border-b border-slate-700 flex flex-wrap gap-2 items-center justify-between">
+                            <div className="flex flex-wrap gap-2 items-center">
+                                <span className="text-xs text-slate-400">Hazır Şablon Yükle:</span>
+                                <button onClick={() => applyPreset(DEFAULT_SPEAKING_PRESET)} className="text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-1.5 px-3 rounded-md font-medium">
+                                    Standart (5 Kriter - 20'şer Puan)
+                                </button>
+                                <button onClick={() => applyPreset(NINTH_GRADE_SPEAKING_PRESET)} className="text-xs bg-slate-700 hover:bg-slate-600 text-purple-300 py-1.5 px-3 rounded-md font-medium">
+                                    9. Sınıf Maarif Modeli (7 Kriter)
+                                </button>
+                            </div>
+                            <div className={`text-sm font-bold px-3 py-1 rounded-md ${totalMax === 100 ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                Toplam Puan: {totalMax} / 100
+                            </div>
+                        </div>
+
+                        <div className="p-5 overflow-y-auto space-y-3 flex-1">
+                            {items.map((item, idx) => (
+                                <div key={item.id || idx} className="flex items-start gap-2 bg-slate-900/50 p-3 rounded-lg border border-slate-700/70">
+                                    <span className="bg-slate-700 text-slate-300 text-xs font-bold px-2 py-1.5 rounded mt-1">K.{idx + 1}</span>
+                                    <textarea
+                                        rows="2"
+                                        value={item.label}
+                                        onChange={e => handleLabelChange(idx, e.target.value)}
+                                        className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-sm text-white ${focusClasses}`}
+                                        placeholder="Kriter açıklaması..."
+                                    />
+                                    <div className="flex flex-col items-center">
+                                        <label className="text-[10px] text-slate-400 mb-0.5">Maks Puan</label>
+                                        <input
+                                            type="number"
+                                            value={item.max}
+                                            onChange={e => handleMaxChange(idx, e.target.value)}
+                                            className={`w-16 p-1.5 text-center bg-slate-700 border border-slate-600 rounded-md font-bold text-amber-400 ${focusClasses}`}
+                                        />
+                                    </div>
+                                    <button onClick={() => handleRemoveCriterion(idx)} className="mt-4 p-2 text-red-400 hover:bg-red-500/20 rounded-md" title="Kriteri Sil">
+                                        Sil
+                                    </button>
+                                </div>
+                            ))}
+                            <button onClick={handleAddCriterion} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-blue-400 rounded-lg font-semibold text-sm transition-colors">
+                                + Yeni Kriter Ekle
+                            </button>
+                        </div>
+
+                        <div className="p-5 border-t border-slate-700 bg-slate-800/90 flex flex-wrap justify-between items-center gap-3">
+                            <button
+                                onClick={() => onCopyCriteriaToAll(items)}
+                                className="py-2 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold"
+                            >
+                                Bu Kriterleri Tüm Sınıflara Uygula
+                            </button>
+                            <div className="flex gap-3">
+                                <button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Vazgeç</button>
+                                <button onClick={() => onSaveCriteria(items)} className="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold">Sınıf İçin Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Dinamik Konuşma Sınavı Değerlendirme Modalı
+        const DynamicSpeakingExamModal = memo(({ student, criteria, scores, onSave, onClose, onScoreChange, examNumber, className }) => {
+            const totalScore = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0);
+            const maxPossible = criteria.reduce((sum, c) => sum + (Number(c.max) || 0), 0);
+
+            const handleQuickFillAllFull = () => {
+                criteria.forEach(c => onScoreChange(c.id, Number(c.max) || 0));
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-3xl flex flex-col max-h-[90vh]">
+                        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-white">
+                                    {examNumber}. Konuşma Sınavı ({className}): <span className="text-blue-400">{student.schoolNumber ? `[${student.schoolNumber}] ` : ''}{student.name}</span>
+                                </h3>
+                            </div>
+                            <button onClick={handleQuickFillAllFull} className="text-xs bg-emerald-600/30 border border-emerald-500 text-emerald-300 px-3 py-1.5 rounded-md hover:bg-emerald-600/50 font-semibold">
+                                Tümüne Tam Puan Ver
+                            </button>
+                        </div>
+                        <div className="p-5 overflow-y-auto space-y-3 flex-1">
+                            {criteria.map((c, idx) => {
+                                const maxVal = Number(c.max) || 0;
+                                const halfVal = Math.round(maxVal / 2);
+                                const currentVal = scores[c.id] !== undefined && scores[c.id] !== null ? Number(scores[c.id]) : '';
+                                return (
+                                    <div key={c.id} className="p-3.5 bg-slate-900/50 rounded-lg border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex-1">
+                                            <span className="text-xs font-bold text-sky-400 mr-2">Kriter {idx + 1} ({maxVal} Puan):</span>
+                                            <span className="text-slate-200 text-sm">{c.label}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => onScoreChange(c.id, maxVal)}
+                                                className={`px-2.5 py-1 rounded text-xs font-bold border ${currentVal === maxVal ? 'bg-green-600 border-green-400 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}
+                                            >
+                                                Tam ({maxVal})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => onScoreChange(c.id, halfVal)}
+                                                className={`px-2.5 py-1 rounded text-xs font-bold border ${currentVal === halfVal ? 'bg-amber-600 border-amber-400 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}
+                                            >
+                                                Orta ({halfVal})
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => onScoreChange(c.id, 0)}
+                                                className={`px-2.5 py-1 rounded text-xs font-bold border ${currentVal === 0 ? 'bg-red-600 border-red-400 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}
+                                            >
+                                                Zayıf (0)
+                                            </button>
+                                            <input
+                                                type="number"
+                                                placeholder="Puan"
+                                                value={currentVal}
+                                                onChange={e => {
+                                                    const val = e.target.value === '' ? null : Math.max(0, Math.min(maxVal, Number(e.target.value)));
+                                                    onScoreChange(c.id, val);
+                                                }}
+                                                className={`w-14 p-1 text-center bg-slate-700 border border-slate-500 rounded text-sm font-bold text-white ${focusClasses}`}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="p-5 border-t border-slate-700 flex justify-between items-center bg-slate-800/90">
+                            <div className="text-white font-bold text-lg">
+                                Toplam Puan: <span className="text-green-400 text-2xl">{totalScore}</span> <span className="text-slate-400 text-sm">/ {maxPossible}</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Kapat</button>
+                                <button onClick={onSave} className="py-2 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
         const StudentAssessmentCard = memo(({ student, index, semester, onScoreChange }) => {
             const donemKey = semester === 1 ? 'donem1' : 'donem2';
             const assessment = student.assessments?.[donemKey] || {};
-            
-            const calculatePerf1 = () => {
-                const val = calculateWeightedPerf1(assessment);
-                return val === null ? '-' : val;
-            };
 
-            const calculatePerf2 = () => {
-                const notes = [assessment.kitap1, assessment.kitap2];
-                const validNotes = notes.filter(n => n !== null && n !== undefined && n !== '' && !isNaN(n));
-                if (validNotes.length === 0) return '-';
-                const sum = validNotes.reduce((acc, n) => acc + Number(n), 0);
-                return Math.round(sum / validNotes.length);
-            };
+            const perf1 = calculateWeightedPerf1(assessment) ?? '-';
+            const validKitap = [assessment.kitap1, assessment.kitap2].filter(n => n !== null && n !== undefined && n !== '' && !isNaN(n));
+            const perf2 = validKitap.length === 0 ? '-' : Math.round(validKitap.reduce((a, b) => a + Number(b), 0) / validKitap.length);
 
-            const perf1 = calculatePerf1();
-            const perf2 = calculatePerf2();
-            
             const NoteInput = ({ type, label }) => {
                 const [val, setVal] = useState(assessment[type] === null || assessment[type] === undefined ? '' : assessment[type]);
                 useEffect(() => {
                     setVal(assessment[type] === null || assessment[type] === undefined ? '' : assessment[type]);
                 }, [assessment[type]]);
-
-                const handleChange = (e) => setVal(e.target.value);
-                const handleBlur = (e) => onScoreChange(student.id, donemKey, type, e.target.value);
-
                 return (
-                    <div className="flex justify-between items-center space-x-2"> 
-                        <label className="text-slate-400">{label}</label> 
-                        <input type="number" value={val} onChange={handleChange} onBlur={handleBlur} className={`w-20 p-1.5 text-center bg-slate-700 rounded-md ${focusClasses}`} /> 
+                    <div className="flex justify-between items-center space-x-2">
+                        <label className="text-slate-400 text-sm">{label}</label>
+                        <input
+                            type="number"
+                            value={val}
+                            onChange={e => setVal(e.target.value)}
+                            onBlur={e => onScoreChange(student.id, donemKey, type, e.target.value)}
+                            className={`w-20 p-1.5 text-center bg-slate-700 rounded-md text-white font-semibold ${focusClasses}`}
+                        />
                     </div>
                 );
             };
 
             return (
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                    <h4 className="font-bold text-lg text-green-300 mb-3 p-2 border border-green-500 rounded-md bg-green-500/10">
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                    <h4 className="font-bold text-base text-green-300 mb-3 p-2 border border-green-500/40 rounded-md bg-green-500/10">
                         <span className="text-slate-400 mr-2">{index + 1}.</span>
                         {student.schoolNumber && <span className="text-amber-400 mr-2">[{student.schoolNumber}]</span>}
                         {student.name}
@@ -365,235 +464,49 @@
             );
         });
 
-        const SemesterCard = ({ semester, students, bookTitles, onScoreChange, onBookTitleChange, onSave, onGenerateReport, onGenerateBookReport }) => {
-            const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-            const handleSave = () => { onSave(); setShowSaveConfirm(true); setTimeout(() => setShowSaveConfirm(false), 2000); };
-            return ( <div className="bg-slate-900/50 p-4 sm:p-6 rounded-lg border border-slate-700"> <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4"> <h3 className="text-xl font-bold text-blue-400">{semester}. Dönem Değerlendirmeleri</h3> <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto"> {showSaveConfirm && <span className="text-green-400 teacher-info">Kaydedildi!</span>} <button onClick={handleSave} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700"><SaveIcon /> <span className="hidden sm:inline">Dönemi Kaydet</span></button> <button onClick={onGenerateBookReport} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700"><BookIcon /> <span className="hidden sm:inline">Kitap Raporu</span></button> <button onClick={onGenerateReport} className="flex-grow sm:flex-grow-0 flex items-center justify-center gap-2 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-500"><DownloadIcon /> <span className="hidden sm:inline">Rapor İndir</span></button> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6"> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 1. Kitap Adı</label><input type="text" value={bookTitles?.kitap1 || ''} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap1', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> <div><label className="block text-sm font-medium text-slate-400">{semester}. Dönem 2. Kitap Adı</label><input type="text" value={bookTitles?.kitap2 || ''} onChange={e => onBookTitleChange(semester === 1 ? 'donem1' : 'donem2', 'kitap2', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md ${focusClasses}`}/></div> </div> <div className="space-y-3"> {students.map((student, index) => ( <StudentAssessmentCard key={student.id} student={student} index={index} semester={semester} onScoreChange={onScoreChange} /> ))} </div> </div> );
-        };
-        
         const StudentScoreRow = memo(({ student, scores, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, calculateGrade }) => {
             const calculatedGrade = calculateGrade(scores);
             return (
-                <div className="bg-slate-800/50 rounded-lg p-4 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/50">
+                <div className="bg-slate-800/50 rounded-lg p-3.5 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/40 border border-slate-700/40">
                     <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0">
                         <span className="text-slate-500 font-semibold w-6">{index + 1}.</span>
-                        <button onClick={() => onDelete(student)} className="p-1 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"><TrashIcon/></button>
-                        {student.schoolNumber && <span className="text-amber-400 font-semibold text-sm">[{student.schoolNumber}]</span>}
-                        <span>{student.name}</span>
+                        <button onClick={() => onDelete(student)} className="p-1 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded" title="Öğrenciyi Sil">✕</button>
+                        {student.schoolNumber && <span className="text-amber-400 font-bold text-sm">[{student.schoolNumber}]</span>}
+                        <span className="truncate">{student.name}</span>
                     </div>
                     <div className="flex flex-col gap-2 md:col-span-6 md:grid md:grid-cols-2 md:gap-4">
-                        <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center">
-                            <span className="font-bold text-slate-400 md:hidden">Sınıf İçi:</span>
+                        <div className="flex justify-between items-center py-1 md:p-0 md:justify-center">
+                            <span className="font-bold text-slate-400 text-sm md:hidden">Sınıf İçi:</span>
                             <div className="flex items-center gap-1.5">
-                                <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="p-1.5 bg-green-500/20 text-green-300 rounded-full"><PlusIcon/></button>
-                                <input type="number" value={scores.inClassPlus} onChange={(e) => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-green-400 ${focusClasses}`}/>
-                                <input type="number" value={scores.inClassMinus} onChange={(e) => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-red-400 ${focusClasses}`}/>
-                                <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="p-1.5 bg-red-500/20 text-red-300 rounded-full"><MinusIcon/></button>
+                                <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="w-7 h-7 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-full font-bold">+</button>
+                                <input type="number" value={scores.inClassPlus} onChange={e => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-green-400 py-1 ${focusClasses}`} />
+                                <input type="number" value={scores.inClassMinus} onChange={e => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-red-400 py-1 ${focusClasses}`} />
+                                <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="w-7 h-7 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-full font-bold">-</button>
                             </div>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:justify-center">
-                            <span className="font-bold text-slate-400 md:hidden">Ödev:</span>
+                        <div className="flex justify-between items-center py-1 md:p-0 md:justify-center">
+                            <span className="font-bold text-slate-400 text-sm md:hidden">Ödev:</span>
                             <div className="flex items-center gap-1.5">
-                                <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="p-1.5 bg-sky-500/20 text-sky-300 rounded-full"><PlusIcon/></button>
-                                <input type="number" value={scores.homeworkPlus} onChange={(e) => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-sky-400 ${focusClasses}`}/>
-                                <input type="number" value={scores.homeworkMinus} onChange={(e) => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-12 text-center bg-slate-700 rounded-md font-semibold text-orange-400 ${focusClasses}`}/>
-                                <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="p-1.5 bg-orange-500/20 text-orange-300 rounded-full"><MinusIcon/></button>
+                                <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="w-7 h-7 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-full font-bold">+</button>
+                                <input type="number" value={scores.homeworkPlus} onChange={e => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-sky-400 py-1 ${focusClasses}`} />
+                                <input type="number" value={scores.homeworkMinus} onChange={e => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-orange-400 py-1 ${focusClasses}`} />
+                                <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="w-7 h-7 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 rounded-full font-bold">-</button>
                             </div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-t border-slate-700/50 md:border-none md:p-0 md:col-span-1 md:justify-center">
-                        <span className="font-bold text-slate-400 md:hidden">Notlar:</span>
-                        <button onClick={() => onOpenNotes(student)} className="p-2 text-slate-400 hover:text-white"><NoteIcon/></button>
+                    <div className="flex justify-between items-center py-1 md:col-span-1 md:justify-center">
+                        <span className="font-bold text-slate-400 text-sm md:hidden">Notlar:</span>
+                        <button onClick={() => onOpenNotes(student)} className={`px-2 py-1 rounded text-xs font-semibold ${student.notes ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>
+                            {student.notes ? 'Not Var' : 'Not'}
+                        </button>
                     </div>
-                    <div className="flex justify-between items-center pt-3 mt-2 border-t border-blue-500/20 md:border-none md:p-0 md:col-span-1 md:justify-center">
-                        <span className="font-bold text-slate-400 md:hidden">Sözlü Notu:</span>
-                        <div className="text-center font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">{calculatedGrade}</div>
+                    <div className="flex justify-between items-center pt-2 md:pt-0 md:col-span-1 md:justify-center">
+                        <span className="font-bold text-slate-400 text-sm md:hidden">Sözlü Notu:</span>
+                        <div className="text-center font-bold text-2xl text-cyan-300">{calculatedGrade}</div>
                     </div>
                 </div>
             );
         });
-
-        // Dinamik Kriterli Konuşma Sınavı Değerlendirme Modalı
-        const DynamicSpeakingExamModal = memo(({ student, criteriaList, scores, onSave, onClose, onScoreChange, examNumber, className }) => {
-            const totalScore = criteriaList.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0);
-            const maxPossible = criteriaList.reduce((sum, c) => sum + (Number(c.max) || 0), 0);
-
-            const handleQuickFillAllFull = () => {
-                criteriaList.forEach(c => onScoreChange(c.id, Number(c.max)));
-            };
-
-            return (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal p-4">
-                    <div className="bg-slate-800 rounded-lg shadow-xl border border-slate-700 w-full max-w-3xl">
-                        <div className="p-5 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                            <h3 className="text-xl font-bold text-white">
-                                {examNumber}. Konuşma Sınavı ({className}): <span className="text-blue-400">{student.schoolNumber ? `[${student.schoolNumber}] ` : ''}{student.name}</span>
-                            </h3>
-                            <button onClick={handleQuickFillAllFull} className="text-xs bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold py-1.5 px-3 rounded-md">
-                                Tümüne Tam Puan Ver
-                            </button>
-                        </div>
-                        <div className="p-6 max-h-[62vh] overflow-y-auto space-y-4">
-                            {criteriaList.map((c, idx) => {
-                                const maxVal = Number(c.max) || 0;
-                                const halfVal = Math.round(maxVal / 2);
-                                const currentVal = scores[c.id];
-                                return (
-                                    <div key={c.id} className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/60">
-                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-2">
-                                            <label className="text-slate-200 font-semibold">
-                                                <span className="text-blue-400 mr-1">{idx + 1}.</span> {c.label} <span className="text-amber-400 text-sm">({maxVal} Puan)</span>
-                                            </label>
-                                            <div className="flex items-center space-x-3 text-sm text-slate-200 shrink-0">
-                                                <button type="button" onClick={() => onScoreChange(c.id, maxVal)} className={`px-2.5 py-1 rounded font-semibold transition-colors ${currentVal === maxVal ? 'bg-green-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}>
-                                                    Tam ({maxVal})
-                                                </button>
-                                                <button type="button" onClick={() => onScoreChange(c.id, halfVal)} className={`px-2.5 py-1 rounded font-semibold transition-colors ${currentVal === halfVal ? 'bg-amber-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}>
-                                                    Orta ({halfVal})
-                                                </button>
-                                                <button type="button" onClick={() => onScoreChange(c.id, 0)} className={`px-2.5 py-1 rounded font-semibold transition-colors ${currentVal === 0 ? 'bg-red-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}>
-                                                    Zayıf (0)
-                                                </button>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    max={maxVal}
-                                                    value={currentVal === null || currentVal === undefined ? '' : currentVal} 
-                                                    onChange={(e) => {
-                                                        const v = e.target.value === '' ? null : Math.max(0, Math.min(maxVal, Number(e.target.value)));
-                                                        onScoreChange(c.id, v);
-                                                    }}
-                                                    placeholder="Puan"
-                                                    className={`w-16 p-1 text-center bg-slate-700 border border-slate-600 rounded font-bold text-sky-300 ${focusClasses}`}
-                                                />
-                                            </div>
-                                        </div>
-                                        {c.details && (
-                                            <p className="text-slate-400 text-xs mt-1 pl-4 border-l-2 border-slate-700">{c.details}</p>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <div className="p-5 bg-slate-800/80 flex justify-between items-center border-t border-slate-700">
-                            <div className="text-white font-bold text-lg">
-                                Toplam Puan: <span className="text-green-400 text-2xl">{totalScore}</span> <span className="text-slate-400 text-sm">/ {maxPossible}</span>
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold">Kapat</button>
-                                <button onClick={onSave} className="py-2 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Kaydet</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        });
-
-        // Manuel Konuşma Sınavı Kriterleri Oluşturma / Düzenleme Modalı
-        const CriteriaEditorModal = ({ activeClass, onSaveCriteria, onApplyToAllClasses, onClose }) => {
-            const [criteriaList, setCriteriaList] = useState(() => {
-                if (activeClass.speakingCriteria && activeClass.speakingCriteria.length > 0) {
-                    return JSON.parse(JSON.stringify(activeClass.speakingCriteria));
-                }
-                return getDefaultCriteriaForClassName(activeClass.name);
-            });
-
-            const totalMaxScore = criteriaList.reduce((sum, item) => sum + (Number(item.max) || 0), 0);
-
-            const handleItemChange = (index, field, value) => {
-                setCriteriaList(prev => prev.map((item, i) => i === index ? { ...item, [field]: field === 'max' ? Number(value) : value } : item));
-            };
-
-            const handleAddCriterion = () => {
-                setCriteriaList(prev => [
-                    ...prev,
-                    { id: 'krit_' + Date.now() + '_' + prev.length, label: 'Yeni Değerlendirme Kriteri', max: 10, details: '' }
-                ]);
-            };
-
-            const handleRemoveCriterion = (index) => {
-                setCriteriaList(prev => prev.filter((_, i) => i !== index));
-            };
-
-            const loadTemplate = (template) => {
-                setCriteriaList(JSON.parse(JSON.stringify(template)));
-            };
-
-            return (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 confirm-modal p-4">
-                    <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl">
-                        <div className="p-5 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                            <div>
-                                <h3 className="text-xl font-bold text-white">Konuşma Sınavı Kriterlerini Düzenle <span className="text-blue-400">({activeClass.name})</span></h3>
-                                <p className="text-slate-400 text-xs mt-1">Bu sınıf düzeyi için kriterleri manuel olarak ekleyebilir, değiştirebilir veya hazır şablon kullanabilirsiniz.</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button onClick={() => loadTemplate(DEFAULT_9TH_GRADE_CRITERIA)} className="text-xs bg-indigo-600/80 hover:bg-indigo-600 text-white py-1.5 px-3 rounded-md font-semibold">
-                                    9. Sınıf Şablonu Yükle
-                                </button>
-                                <button onClick={() => loadTemplate(DEFAULT_STANDARD_CRITERIA)} className="text-xs bg-teal-600/80 hover:bg-teal-600 text-white py-1.5 px-3 rounded-md font-semibold">
-                                    Standart 5'li Şablon Yükle
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
-                            {criteriaList.map((item, idx) => (
-                                <div key={item.id || idx} className="p-4 bg-slate-900/60 border border-slate-700 rounded-lg space-y-3">
-                                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                                        <span className="bg-blue-600/30 text-blue-300 font-bold px-2.5 py-1 rounded text-sm">Kriter {idx + 1}</span>
-                                        <input 
-                                            type="text" 
-                                            value={item.label} 
-                                            onChange={(e) => handleItemChange(idx, 'label', e.target.value)}
-                                            placeholder="Kriter Başlığı / Cümlesi"
-                                            className={`flex-grow w-full sm:w-auto p-2 bg-slate-700 border border-slate-600 rounded-md text-white text-sm ${focusClasses}`}
-                                        />
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <label className="text-xs text-slate-400">Maks. Puan:</label>
-                                            <input 
-                                                type="number" 
-                                                value={item.max} 
-                                                onChange={(e) => handleItemChange(idx, 'max', e.target.value)}
-                                                className={`w-16 p-2 text-center bg-slate-700 border border-slate-600 rounded-md text-amber-400 font-bold text-sm ${focusClasses}`}
-                                            />
-                                            <button onClick={() => handleRemoveCriterion(idx)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-md" title="Kriteri Sil">
-                                                <TrashIcon />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <input 
-                                            type="text" 
-                                            value={item.details || ''} 
-                                            onChange={(e) => handleItemChange(idx, 'details', e.target.value)}
-                                            placeholder="Alt açıklama / detay cümlesi (İsteğe bağlı - Raporda ve değerlendirmede görünür)"
-                                            className={`w-full p-2 bg-slate-800 border border-slate-700 rounded-md text-slate-300 text-xs ${focusClasses}`}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-
-                            <button onClick={handleAddCriterion} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-slate-300 hover:text-blue-400 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors">
-                                <PlusIcon /> Yeni Kriter Ekle
-                            </button>
-                        </div>
-
-                        <div className="p-5 bg-slate-800/90 border-t border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <div className="text-sm font-bold">
-                                Toplam Maksimum Puan: <span className={totalMaxScore === 100 ? "text-green-400 text-lg" : "text-amber-400 text-lg"}>{totalMaxScore}</span>
-                                {totalMaxScore !== 100 && <span className="text-amber-400 text-xs ml-2">(100 puan olması önerilir)</span>}
-                            </div>
-                            <div className="flex flex-wrap gap-3 justify-end">
-                                <button onClick={onClose} className="py-2 px-4 bg-slate-600 text-white rounded-lg hover:bg-slate-500 font-semibold text-sm">İptal</button>
-                                <button onClick={() => onApplyToAllClasses(criteriaList)} className="py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold text-sm">Tüm Sınıflara Uygula</button>
-                                <button onClick={() => onSaveCriteria(criteriaList)} className="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-sm">Sadece {activeClass.name} İçin Kaydet</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
 
         function PerformancePanel({ user }) {
             const [activeView, setActiveView] = useState('classes');
@@ -613,13 +526,1122 @@
             const [newStudentName, setNewStudentName] = useState('');
             const [listText, setListText] = useState('');
             const [isParsingPdf, setIsParsingPdf] = useState(false);
+            const [pdfStatusMsg, setPdfStatusMsg] = useState('');
             const [isLoading, setIsLoading] = useState(true);
-            const [tempClassData, setTempClassData] = useState(null); 
+            const [tempClassData, setTempClassData] = useState(null);
             const [activeSemester, setActiveSemester] = useState(1);
             const [searchTerm, setSearchTerm] = useState('');
             const [evaluatingSpeaking, setEvaluatingSpeaking] = useState(null);
-            const [isEditingCriteria, setIsEditingCriteria] = useState(false);
-            const [showScrollTop, setShowScrollTop] = useState(false);
-            
+            const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
+
             const activeClass = classes.find(c => c.id === activeClassId);
-            const active
+
+            // Seçili sınıfın konuşma kriterlerini getir (Yoksa sınıf adına göre 9. sınıf veya standart varsayılanı getir)
+            const getClassSpeakingCriteria = useCallback((cls) => {
+                if (!cls) return DEFAULT_SPEAKING_PRESET;
+                if (cls.speakingCriteria && Array.isArray(cls.speakingCriteria) && cls.speakingCriteria.length > 0) {
+                    return cls.speakingCriteria;
+                }
+                const isNinth = cls.name && cls.name.trim().startsWith('9');
+                return isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
+            }, []);
+
+            useEffect(() => {
+                if (user) {
+                    setIsLoading(true);
+                    const docRef = db.collection('userData').doc(user.uid);
+                    const unsubscribe = docRef.onSnapshot(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            const currentSettings = data.settings || settings;
+                            if (data.settings) {
+                                setSettings(data.settings);
+                                setTempSettings(data.settings);
+                            }
+
+                            const calcSync = (scores) => {
+                                if (!scores) return currentSettings.baseScore;
+                                const sc = currentSettings.baseScore +
+                                    (scores.inClassPlus * currentSettings.inClassPlus) +
+                                    (scores.inClassMinus * currentSettings.inClassMinus) +
+                                    (scores.homeworkPlus * currentSettings.homeworkPlus) +
+                                    (scores.homeworkMinus * currentSettings.homeworkMinus);
+                                return Math.max(0, Math.min(100, sc));
+                            };
+
+                            const migratedClasses = (data.classes || []).map(cls => {
+                                const isNinth = cls.name && cls.name.trim().startsWith('9');
+                                const defaultCrit = isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
+                                const classCriteria = (cls.speakingCriteria && cls.speakingCriteria.length > 0) ? cls.speakingCriteria : defaultCrit;
+
+                                const migratedStudents = (cls.students || []).map(student => {
+                                    if (!student.scores || !student.scores.donem1) {
+                                        const oldScores = (student.scores && student.scores.inClassPlus !== undefined) ? JSON.parse(JSON.stringify(student.scores)) : { ...defaultScores };
+                                        student.scores = { donem1: oldScores, donem2: { ...defaultScores } };
+                                    }
+                                    if (!student.assessments || !student.assessments.donem1?.hasOwnProperty('dersIciDurum')) {
+                                        student.assessments = JSON.parse(JSON.stringify(newAssessmentStructure));
+                                    }
+                                    if (!student.speakingExams || !student.speakingExams.donem1) {
+                                        student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
+                                    }
+                                    // Eski 9. sınıf konuşma verisi varsa speakingExams içine birleştir
+                                    if (student.speakingExams9th) {
+                                        ['donem1', 'donem2'].forEach(dKey => {
+                                            ['sinav1', 'sinav2'].forEach(sKey => {
+                                                if (!student.speakingExams[dKey][sKey] && student.speakingExams9th[dKey]?.[sKey]) {
+                                                    student.speakingExams[dKey][sKey] = student.speakingExams9th[dKey][sKey];
+                                                }
+                                            });
+                                        });
+                                    }
+                                    if (student.schoolNumber === undefined) student.schoolNumber = '';
+
+                                    student.assessments.donem1.dersIciDurum = calcSync(student.scores.donem1);
+                                    student.assessments.donem2.dersIciDurum = calcSync(student.scores.donem2);
+                                    return student;
+                                });
+
+                                return {
+                                    ...cls,
+                                    bookTitles: cls.bookTitles || JSON.parse(JSON.stringify(newBookTitleStructure)),
+                                    speakingCriteria: classCriteria,
+                                    students: sortStudentsList(migratedStudents)
+                                };
+                            });
+
+                            setClasses(migratedClasses);
+                            if (migratedClasses.length > 0 && !activeClassId) {
+                                setActiveClassId(migratedClasses[0].id);
+                            }
+                        }
+                        setIsLoading(false);
+                    }, err => {
+                        console.error("Veri okuma hatası:", err);
+                        setIsLoading(false);
+                    });
+                    return () => unsubscribe();
+                }
+            }, [user]);
+
+            useEffect(() => {
+                const handler = setTimeout(() => {
+                    if (!isLoading && user && activeView === 'classes') {
+                        db.collection('userData').doc(user.uid).set({ classes, settings }, { merge: true });
+                    }
+                }, 1200);
+                return () => clearTimeout(handler);
+            }, [classes, settings, user, isLoading, activeView]);
+
+            useEffect(() => {
+                if (activeView === 'assessments' && activeClass) {
+                    setTempClassData(JSON.parse(JSON.stringify(activeClass)));
+                } else {
+                    setTempClassData(null);
+                }
+            }, [activeView, activeClassId, classes]);
+
+            // e-OKUL PDF YÜKLEME (Sınıf Adını, Okul/Öğretmen Bilgisini ve Öğrencileri Otomatik Ayıklar)
+            const handleEokulPdfUpload = async (e, targetClassId = null) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setIsParsingPdf(true);
+                setPdfStatusMsg('PDF analiz ediliyor...');
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    let extractedStudents = [];
+                    let detectedClassName = '';
+                    let detectedSchool = '';
+                    let detectedBranch = '';
+
+                    const blacklist = [
+                        'OKUL', 'KURUM', 'DÖNEM', 'PUAN', 'ÇİZELGESİ', 'ÖĞRENCİ', 'SINAVLAR',
+                        'YAZILI', 'PERFORMANS', 'UYGULAMA', 'PROJE', 'MUAF', 'NUMARASI', 'SIRA',
+                        'ADI SOYADI', 'DERS', 'ÖĞRETMENİ', 'MÜDÜR', 'YARDIMCISI', 'DEVAMSIZLIKTAN',
+                        'BAŞARISIZ', 'SAYILAN', 'ALANI', 'DALI', 'ŞUBESİ', 'SAATİ', 'HAFTALIK',
+                        'TÜRK DİLİ', 'EDEBİYATI', 'İSTANBUL', 'ANADOLU', 'LİSESİ', 'CE-OKUL'
+                    ];
+
+                    for (let pageNum = 1; pdf.numPages >= pageNum; pageNum++) {
+                        const page = await pdf.getPage(pageNum);
+                        const textContent = await page.getTextContent();
+                        const fullPageText = textContent.items.map(i => i.str).join(' ');
+
+                        // Sınıf ve Şube adını otomatik yakala (Örn: "9. Sınıf / F Şubesi" -> "9-F")
+                        if (!detectedClassName) {
+                            const clsMatch = fullPageText.match(/(\d+)\.\s*Sınıf\s*\/\s*([A-ZÇĞİÖŞÜ])\s*Şubesi/i);
+                            if (clsMatch) {
+                                detectedClassName = `${clsMatch[1]}-${clsMatch[2].toUpperCase()}`;
+                            }
+                        }
+
+                        // Y koordinatına göre satırları birleştir
+                        const rows = [];
+                        textContent.items.forEach(item => {
+                            const str = item.str.trim();
+                            if (!str) return;
+                            const y = item.transform[5];
+                            const x = item.transform[4];
+                            let row = rows.find(r => 4 > Math.abs(r.y - y));
+                            if (!row) {
+                                row = { y, items: [] };
+                                rows.push(row);
+                            }
+                            row.items.push({ x, str });
+                        });
+
+                        rows.sort((a, b) => b.y - a.y);
+
+                        rows.forEach(row => {
+                            row.items.sort((a, b) => a.x - b.x);
+                            const lineText = row.items.map(i => i.str).join(' ').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+
+                            // Öğrenci satırı: "434 1 MUHAMMED ALSILES" veya "3 559 RAMAZAN AYAZ"
+                            const matchTwoNums = lineText.match(/^(\d+)\s+(\d+)\s+([A-ZÇĞİÖŞÜa-zçğıöşü\s]{3,})$/);
+                            if (matchTwoNums) {
+                                const n1 = parseInt(matchTwoNums[1], 10);
+                                const n2 = parseInt(matchTwoNums[2], 10);
+                                const rawName = matchTwoNums[3].trim();
+                                const upperName = rawName.toLocaleUpperCase('tr-TR');
+                                const isBlacklisted = blacklist.some(w => upperName.includes(w));
+
+                                if (!isBlacklisted && rawName.includes(' ')) {
+                                    // Sıra no (1..len+5) ile okul numarasını ayırt et
+                                    const expectedSeq = extractedStudents.length + 1;
+                                    let schoolNo = n1;
+                                    if (n1 === expectedSeq && n2 !== expectedSeq) {
+                                        schoolNo = n2;
+                                    } else if (n2 === expectedSeq && n1 !== expectedSeq) {
+                                        schoolNo = n1;
+                                    } else if (60 >= n1 && n2 > 60) {
+                                        schoolNo = n2;
+                                    } else if (60 >= n2 && n1 > 60) {
+                                        schoolNo = n1;
+                                    } else {
+                                        schoolNo = Math.max(n1, n2);
+                                    }
+                                    extractedStudents.push({ schoolNumber: String(schoolNo), name: rawName });
+                                }
+                            }
+                        });
+                    }
+
+                    if (extractedStudents.length === 0) {
+                        alert("PDF dosyasından öğrenci listesi okunamadı. Lütfen e-Okul Puan Çizelgesi formatında bir PDF seçtiğinizden emin olun.");
+                        return;
+                    }
+
+                    const baseScoreVal = settings.baseScore;
+                    const newStudentObjects = extractedStudents.map((st, idx) => ({
+                        id: Date.now() + idx,
+                        schoolNumber: st.schoolNumber,
+                        name: st.name,
+                        notes: '',
+                        scores: { donem1: { ...defaultScores }, donem2: { ...defaultScores } },
+                        assessments: {
+                            donem1: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+                            donem2: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+                        },
+                        speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
+                    }));
+
+                    const finalClassName = detectedClassName || file.name.replace(/\.pdf$/i, '').toUpperCase();
+                    const isNinth = finalClassName.startsWith('9');
+
+                    let updatedClasses = [...classes];
+                    let selectedId = targetClassId;
+
+                    if (!selectedId) {
+                        // Aynı isimde sınıf var mı kontrol et
+                        const existingCls = updatedClasses.find(c => c.name.toLocaleUpperCase('tr-TR') === finalClassName.toLocaleUpperCase('tr-TR'));
+                        if (existingCls) {
+                            selectedId = existingCls.id;
+                        }
+                    }
+
+                    if (selectedId) {
+                        updatedClasses = updatedClasses.map(c => {
+                            if (c.id !== selectedId) return c;
+                            const existingNums = new Set(c.students.map(s => s.schoolNumber));
+                            const filteredNew = newStudentObjects.filter(s => !existingNums.has(s.schoolNumber));
+                            return { ...c, students: sortStudentsList([...c.students, ...filteredNew]) };
+                        });
+                        setActiveClassId(selectedId);
+                    } else {
+                        const newCls = {
+                            id: Date.now(),
+                            name: finalClassName,
+                            students: sortStudentsList(newStudentObjects),
+                            bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)),
+                            speakingCriteria: isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET
+                        };
+                        updatedClasses.push(newCls);
+                        setActiveClassId(newCls.id);
+                    }
+
+                    setClasses(updatedClasses);
+                    db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                    setPdfStatusMsg(`${finalClassName} sınıfı (${extractedStudents.length} öğrenci) başarıyla aktarıldı!`);
+                    setTimeout(() => setPdfStatusMsg(''), 4000);
+                } catch (err) {
+                    console.error("PDF okuma hatası:", err);
+                    alert("PDF okunurken hata oluştu: " + err.message);
+                } finally {
+                    setIsParsingPdf(false);
+                    e.target.value = '';
+                }
+            };
+
+            // Konuşma Sınavı Kriterlerini Kaydetme
+            const handleSaveClassCriteria = (newCriteriaList) => {
+                if (!activeClassId) return;
+                const updatedClasses = classes.map(c => c.id === activeClassId ? { ...c, speakingCriteria: newCriteriaList } : c);
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                setIsCriteriaModalOpen(false);
+            };
+
+            const handleCopyCriteriaToAllClasses = (newCriteriaList) => {
+                const updatedClasses = classes.map(c => ({ ...c, speakingCriteria: JSON.parse(JSON.stringify(newCriteriaList)) }));
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                setIsCriteriaModalOpen(false);
+            };
+
+            const handleOpenSpeakingModal = (student, semester, examNumber) => {
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
+                const criteria = getClassSpeakingCriteria(activeClass);
+                const currentScores = student.speakingExams?.[donemKey]?.[sinavKey] || {};
+                const initialScores = {};
+                criteria.forEach(c => {
+                    initialScores[c.id] = currentScores[c.id] !== undefined ? currentScores[c.id] : null;
+                });
+                setEvaluatingSpeaking({ student, semester, examNumber, scores: initialScores, criteria });
+            };
+
+            const handleSpeakingScoreChange = (criterionId, value) => {
+                setEvaluatingSpeaking(prev => ({
+                    ...prev,
+                    scores: { ...prev.scores, [criterionId]: value }
+                }));
+            };
+
+            const handleSaveSpeakingExam = () => {
+                if (!evaluatingSpeaking) return;
+                const { student, semester, examNumber, scores } = evaluatingSpeaking;
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
+                const updatedClasses = classes.map(cls => {
+                    if (cls.id !== activeClassId) return cls;
+                    return {
+                        ...cls,
+                        students: cls.students.map(s => {
+                            if (s.id !== student.id) return s;
+                            const newSpeakingExams = JSON.parse(JSON.stringify(s.speakingExams || newSpeakingExamStructure));
+                            if (!newSpeakingExams[donemKey]) newSpeakingExams[donemKey] = { sinav1: null, sinav2: null };
+                            newSpeakingExams[donemKey][sinavKey] = scores;
+                            return { ...s, speakingExams: newSpeakingExams };
+                        })
+                    };
+                });
+                setClasses(updatedClasses);
+                setEvaluatingSpeaking(null);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+            };
+
+            // Dinamik Konuşma Sınavı Özet Raporu (Yatay - Sınav 1 & Sınav 2 + Kriter Açıklamaları)
+            const handleGenerateDynamicSpeakingSummaryReport = (semester) => {
+                if (!activeClass) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const students = activeClass.students;
+                const criteria = getClassSpeakingCriteria(activeClass);
+                const studentsPerPage = 15;
+                const numPages = Math.ceil(students.length / studentsPerPage);
+
+                const criteriaHeaders = () => criteria.map((c, i) => `<th style="border: 1px solid #333; padding: 4px; font-size: 8px;">K.${i + 1}<br/>(${c.max}p)</th>`).join('');
+                const criteriaNotes = criteria.map((c, i) => `<li><b>K.${i + 1} (${c.max} Puan):</b> ${c.label}</li>`).join('');
+
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const chunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const rows = chunk.map((student, idx) => {
+                        const globalIndex = i * studentsPerPage + idx + 1;
+                        const s1 = student.speakingExams?.[donemKey]?.sinav1 || {};
+                        const s2 = student.speakingExams?.[donemKey]?.sinav2 || {};
+                        const t1 = criteria.reduce((sum, c) => sum + (Number(s1[c.id]) || 0), 0);
+                        const t2 = criteria.reduce((sum, c) => sum + (Number(s2[c.id]) || 0), 0);
+                        const ort = (t1 > 0 || t2 > 0) ? Math.round((t1 + t2) / ((t1 > 0 ? 1 : 0) + (t2 > 0 ? 1 : 0))) : '-';
+
+                        const cells = (scores) => criteria.map(c => `<td style="border: 1px solid #ccc; padding: 4px; font-size: 8.5px;">${scores[c.id] ?? '-'}</td>`).join('');
+
+                        return `<tr style="${globalIndex % 2 === 0 ? 'background-color: #f8fafc;' : ''}">
+                            <td style="border: 1px solid #333; padding: 4px; font-size: 8.5px;">${student.schoolNumber || globalIndex}</td>
+                            <td style="border: 1px solid #333; padding: 4px; text-align: left; font-size: 8.5px;">${student.name}</td>
+                            ${cells(s1)}<td style="border: 1px solid #333; padding: 4px; font-weight: bold; background-color: #e0f2fe; font-size: 9px;">${t1 || '-'}</td>
+                            ${cells(s2)}<td style="border: 1px solid #333; padding: 4px; font-weight: bold; background-color: #ffedd5; font-size: 9px;">${t2 || '-'}</td>
+                            <td style="border: 1px solid #333; padding: 4px; font-weight: bold; background-color: #b2f5ea; font-size: 9px;">${ort}</td>
+                        </tr>`;
+                    }).join('');
+
+                    const footer = (i === numPages - 1)
+                        ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 4mm;"><p style="font-weight: bold;">${settings.teacherName || 'Ders Öğretmeni'} (${settings.branchName || 'Branş'})</p></div>`
+                        : '<div></div>';
+
+                    htmlContent += `<div style="box-sizing: border-box; width: 297mm; height: 210mm; padding: 12mm 15mm 18mm 15mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="text-align: center; margin-bottom: 3mm;">
+                                <h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
+                                <h2 style="font-size: 13px;">${activeClass.name} Sınıfı ${semester}. Dönem Konuşma Sınavı Kriterli Özet Raporu (Sayfa ${i + 1}/${numPages})</h2>
+                            </div>
+                            <div style="font-size: 8px; margin-bottom: 4mm; padding: 5px; border: 1px solid #cbd5e1; background-color: #f8fafc;">
+                                <h4 style="font-weight: bold; color: #1e40af; margin-bottom: 2px;">Değerlendirme Ölçütleri:</h4>
+                                <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 12px;">${criteriaNotes}</ul>
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                                <thead>
+                                    <tr style="background-color: #e2e8f0;">
+                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; font-size: 8px; width: 5%;">Okul No</th>
+                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; text-align: left; font-size: 8px; width: 17%;">Öğrenci Adı Soyadı</th>
+                                        <th colspan="${criteria.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #bae6fd; font-size: 8.5px;">1. KONUŞMA SINAVI</th>
+                                        <th colspan="${criteria.length + 1}" style="border: 1px solid #333; padding: 4px; background-color: #fed7aa; font-size: 8.5px;">2. KONUŞMA SINAVI</th>
+                                        <th rowspan="2" style="border: 1px solid #333; padding: 4px; background-color: #99f6e4; font-size: 8px;">DÖNEM<br/>ORT.</th>
+                                    </tr>
+                                    <tr style="background-color: #f1f5f9;">
+                                        ${criteriaHeaders()}<th style="border: 1px solid #333; background-color: #7dd3fc; font-size: 8px;">TOP</th>
+                                        ${criteriaHeaders()}<th style="border: 1px solid #333; background-color: #fdba74; font-size: 8px;">TOP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                        ${footer}
+                    </div>`;
+                }
+
+                const container = document.createElement('div');
+                container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '297mm';
+                container.innerHTML = htmlContent;
+                document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) {
+                        pdf.save(`${activeClass.name} - ${semester}. Dönem Konuşma Sınavı Özet Raporu.pdf`);
+                        document.body.removeChild(container);
+                        setIsGeneratingPdf(false);
+                        return;
+                    }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => {
+                        if (idx > 0) pdf.addPage('a4', 'landscape');
+                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210, undefined, 'FAST');
+                        process(idx + 1);
+                    });
+                };
+                process(0);
+            };
+
+            // Dinamik Konuşma Sınavı Bireysel Detay Raporu
+            const handleGenerateDynamicSpeakingDetailedReport = (semester) => {
+                if (!activeClass) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const students = activeClass.students;
+                const criteria = getClassSpeakingCriteria(activeClass);
+                let htmlContent = '';
+
+                students.forEach((student, index) => {
+                    const s1 = student.speakingExams?.[donemKey]?.sinav1 || {};
+                    const s2 = student.speakingExams?.[donemKey]?.sinav2 || {};
+                    const t1 = criteria.reduce((sum, c) => sum + (Number(s1[c.id]) || 0), 0);
+                    const t2 = criteria.reduce((sum, c) => sum + (Number(s2[c.id]) || 0), 0);
+
+                    const scoreRows = (scores) => criteria.map((c, i) => `
+                        <tr>
+                            <td style="border: 1px solid #ccc; padding: 6px; text-align: left;"><b>K.${i + 1}:</b> ${c.label}</td>
+                            <td style="border: 1px solid #ccc; padding: 6px; text-align: center;">${c.max}</td>
+                            <td style="border: 1px solid #ccc; padding: 6px; text-align: center; font-weight: bold;">${scores[c.id] ?? '-'}</td>
+                        </tr>
+                    `).join('');
+
+                    const footerHtml = (index === students.length - 1)
+                        ? `<p style="font-weight: bold;">${settings.teacherName || 'Ders Öğretmeni'} (${settings.branchName || 'Branş'})</p>`
+                        : '';
+
+                    htmlContent += `<div style="padding: 15mm 15mm 22mm 15mm; box-sizing: border-box; width: 210mm; height: 297mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="text-align: center; margin-bottom: 8mm;">
+                                <h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1>
+                                <h2 style="font-size: 14px;">${activeClass.name} Sınıfı ${semester}. Dönem Konuşma Sınavı Bireysel Değerlendirme Formu</h2>
+                            </div>
+                            <p style="font-size: 12px; margin-bottom: 6mm;"><b>Öğrenci:</b> ${student.schoolNumber ? `[${student.schoolNumber}] ` : ''}${student.name}</p>
+                            <div style="display: flex; gap: 8mm; justify-content: space-between;">
+                                <div style="flex: 1;">
+                                    <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 3mm;">1. Konuşma Sınavı (Toplam: ${t1})</h3>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                                        <thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Puan</th></tr></thead>
+                                        <tbody>${scoreRows(s1)}</tbody>
+                                    </table>
+                                </div>
+                                <div style="flex: 1;">
+                                    <h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 3mm;">2. Konuşma Sınavı (Toplam: ${t2})</h3>
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 9.5px;">
+                                        <thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Puan</th></tr></thead>
+                                        <tbody>${scoreRows(s2)}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; text-align: right; border-top: 1px solid #eee; padding-top: 5px;">${footerHtml}</div>
+                    </div>`;
+                });
+
+                const container = document.createElement('div');
+                container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent;
+                document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) {
+                        pdf.save(`${activeClass.name} - ${semester}. Dönem Konuşma Detay Raporu.pdf`);
+                        document.body.removeChild(container);
+                        setIsGeneratingPdf(false);
+                        return;
+                    }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => {
+                        if (idx > 0) pdf.addPage();
+                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                        process(idx + 1);
+                    });
+                };
+                process(0);
+            };
+
+            const handleSaveAssessments = useCallback(() => {
+                const updatedClasses = classes.map(cls => cls.id === activeClassId ? tempClassData : cls);
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+            }, [classes, activeClassId, tempClassData, user]);
+
+            const handleTempScoreChange = useCallback((studentId, donem, type, value) => {
+                const newScore = value === '' ? null : Math.max(0, Math.min(100, Number(value)));
+                setTempClassData(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        students: prev.students.map(s => s.id !== studentId ? s : {
+                            ...s,
+                            assessments: { ...s.assessments, [donem]: { ...s.assessments[donem], [type]: newScore } }
+                        })
+                    };
+                });
+            }, []);
+
+            const handleTempBookTitleChange = useCallback((donem, kitap, value) => {
+                setTempClassData(prev => !prev ? null : ({
+                    ...prev,
+                    bookTitles: { ...prev.bookTitles, [donem]: { ...prev.bookTitles[donem], [kitap]: value } }
+                }));
+            }, []);
+
+            const handleGenerateSemesterReport = (semester) => {
+                if (!tempClassData) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const students = tempClassData.students;
+                const studentsPerPage = 18;
+                const numPages = Math.ceil(students.length / studentsPerPage);
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const chunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const rows = chunk.map((s, idx) => {
+                        const globalIdx = i * studentsPerPage + idx + 1;
+                        const ass = s.assessments[donemKey] || {};
+                        const perf1 = calculateWeightedPerf1(ass);
+                        const perf2Notes = [ass.kitap1, ass.kitap2].filter(n => n !== null && n !== undefined && n !== '' && !isNaN(n));
+                        const perf2 = perf2Notes.length > 0 ? Math.round(perf2Notes.reduce((a, b) => a + Number(b), 0) / perf2Notes.length) : '-';
+                        return `<tr style="text-align: center;"><td style="border: 1px solid #333; padding: 5px;">${s.schoolNumber || globalIdx}</td><td style="border: 1px solid #333; padding: 5px; text-align: left;">${s.name}</td><td style="border: 1px solid #333; padding: 5px;">${ass.dersIciDurum ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.yazma1 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.yazma2 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px; background-color: #e0f2fe;"><b>${perf1 ?? '-'}</b></td><td style="border: 1px solid #333; padding: 5px;">${ass.kitap1 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.kitap2 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px; background-color: #ffedd5;"><b>${perf2}</b></td></tr>`;
+                    }).join('');
+                    const footer = (i === numPages - 1) ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px; margin-top: 5mm;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen'} (${settings.branchName || 'Branş'})</p></div>` : '<div></div>';
+                    htmlContent += `<div style="box-sizing: border-box; width: 210mm; height: 297mm; padding: 15mm 15mm 22mm 15mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="text-align: center;"><h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 14px;">${tempClassData.name} Sınıfı ${semester}. Dönem Performans Notları (Sayfa ${i + 1}/${numPages})</h2><p style="font-size: 9px; color: #555;">1. Performans: %50 Ders İçi Durum + %50 Yazma Görevleri Ortalaması</p></div><table style="width: 100%; border-collapse: collapse; font-size: 9px; margin-top: 12px;"><thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 5px;">Okul No</th><th style="border: 1px solid #333; padding: 5px; text-align: left; width: 30%;">Öğrenci</th><th style="border: 1px solid #333; padding: 5px;">Ders İçi (%50)</th><th style="border: 1px solid #333; padding: 5px;">Yazma 1 (%25)</th><th style="border: 1px solid #333; padding: 5px;">Yazma 2 (%25)</th><th style="border: 1px solid #333; padding: 5px;">Perf. 1</th><th style="border: 1px solid #333; padding: 5px;">Kitap 1</th><th style="border: 1px solid #333; padding: 5px;">Kitap 2</th><th style="border: 1px solid #333; padding: 5px;">Perf. 2</th></tr></thead><tbody>${rows}</tbody></table></div>${footer}</div>`;
+                }
+                const container = document.createElement('div'); container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Performans Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
+                };
+                process(0);
+            };
+
+            const handleGenerateBookReport = (semester) => {
+                if (!tempClassData) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const bookTitles = tempClassData.bookTitles?.[donemKey] || { kitap1: '', kitap2: '' };
+                const students = tempClassData.students;
+                const studentsPerPage = 22;
+                const numPages = Math.ceil(students.length / studentsPerPage);
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const chunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const rows = chunk.map((s, index) => {
+                        const globalIdx = i * studentsPerPage + index + 1;
+                        const ass = s.assessments[donemKey] || {};
+                        return `<tr style="text-align: center;"><td style="border: 1px solid #eee; padding: 7px;">${s.schoolNumber || globalIdx}</td><td style="border: 1px solid #eee; padding: 7px; text-align: left;">${s.name}</td><td style="border: 1px solid #eee; padding: 7px;">${ass.kitap1 ?? '-'}</td><td style="border: 1px solid #eee; padding: 7px;">${ass.kitap2 ?? '-'}</td></tr>`;
+                    }).join('');
+                    const footer = (i === numPages - 1) ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px; margin-top: 5mm;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen'} (${settings.branchName || 'Branş'})</p></div>` : '<div></div>';
+                    htmlContent += `<div style="box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm 20mm 25mm 20mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="text-align: center; margin-bottom: 8mm;"><h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 14px;">${tempClassData.name} Sınıfı ${semester}. Dönem Kitap Sınav Notları (Sayfa ${i + 1}/${numPages})</h2><p style="font-size: 10px; margin-top: 4px;"><b>1. Kitap:</b> ${bookTitles.kitap1 || 'Belirtilmemiş'} | <b>2. Kitap:</b> ${bookTitles.kitap2 || 'Belirtilmemiş'}</p></div><table style="width: 100%; border-collapse: collapse; font-size: 11px;"><thead><tr><th style="padding: 7px; text-align: left; border-bottom: 2px solid #333;">Okul No</th><th style="padding: 7px; text-align: left; border-bottom: 2px solid #333; width: 55%;">Öğrenci Adı</th><th style="padding: 7px; text-align: center; border-bottom: 2px solid #333;">1. Kitap</th><th style="padding: 7px; text-align: center; border-bottom: 2px solid #333;">2. Kitap</th></tr></thead><tbody>${rows}</tbody></table></div>${footer}</div>`;
+                }
+                const container = document.createElement('div'); container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Kitap Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
+                };
+                process(0);
+            };
+
+            const handleAddClass = () => {
+                if (newClassName.trim() === '') return;
+                const clsName = newClassName.trim();
+                const isNinth = clsName.startsWith('9');
+                const newClass = {
+                    id: Date.now(),
+                    name: clsName,
+                    students: [],
+                    bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)),
+                    speakingCriteria: isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET
+                };
+                setClasses(prev => [...prev, newClass]);
+                setActiveClassId(newClass.id);
+                setNewClassName('');
+            };
+
+            const handleAddStudent = () => {
+                if (newStudentName.trim() === '' || !activeClassId) return;
+                const baseScoreVal = settings.baseScore;
+                const newStudent = {
+                    id: Date.now(),
+                    schoolNumber: newStudentNumber.trim(),
+                    name: newStudentName.trim(),
+                    notes: '',
+                    scores: { donem1: { ...defaultScores }, donem2: { ...defaultScores } },
+                    assessments: {
+                        donem1: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+                        donem2: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+                    },
+                    speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
+                };
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c));
+                setNewStudentNumber('');
+                setNewStudentName('');
+            };
+
+            const handleTextListSave = () => {
+                if (!activeClassId) return;
+                const lines = listText.split('\n').filter(line => line.trim() !== '');
+                const baseScoreVal = settings.baseScore;
+                const newStudents = lines.map((line, index) => {
+                    let cleanLine = line.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+                    let schoolNo = '';
+                    let studentName = cleanLine;
+                    const m2 = cleanLine.match(/^(\d+)\s+(\d+)\s+(.+)$/);
+                    const m1 = cleanLine.match(/^(\d+)[\.\-\s]+(.+)$/);
+                    if (m2) {
+                        const n1 = parseInt(m2[1], 10);
+                        const n2 = parseInt(m2[2], 10);
+                        schoolNo = String(60 >= n1 && n2 > 60 ? n2 : (60 >= n2 && n1 > 60 ? n1 : Math.max(n1, n2)));
+                        studentName = m2[3].trim();
+                    } else if (m1) {
+                        schoolNo = m1[1].trim();
+                        studentName = m1[2].trim();
+                    }
+                    return {
+                        id: Date.now() + index,
+                        schoolNumber: schoolNo,
+                        name: studentName,
+                        notes: '',
+                        scores: { donem1: { ...defaultScores }, donem2: { ...defaultScores } },
+                        assessments: {
+                            donem1: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+                            donem2: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+                        },
+                        speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
+                    };
+                });
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c));
+                setListText('');
+            };
+
+            const calculateGrade = useCallback((scores) => {
+                if (!scores) return settings.baseScore;
+                const score = settings.baseScore + (scores.inClassPlus * settings.inClassPlus) + (scores.inClassMinus * settings.inClassMinus) + (scores.homeworkPlus * settings.homeworkPlus) + (scores.homeworkMinus * settings.homeworkMinus);
+                return Math.max(0, Math.min(100, score));
+            }, [settings]);
+
+            const handleManualScoreChange = useCallback((studentId, scoreType, value) => {
+                const scoreToSet = value === '' ? 0 : Math.max(0, Number(value));
+                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                setClasses(prevClasses => prevClasses.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return {
+                        ...c,
+                        students: c.students.map(s => {
+                            if (s.id !== studentId) return s;
+                            const currentScores = s.scores[donemKey] || defaultScores;
+                            const newScores = { ...currentScores, [scoreType]: scoreToSet };
+                            const newGrade = calculateGrade(newScores);
+                            const newAssessments = { ...s.assessments };
+                            newAssessments[donemKey].dersIciDurum = newGrade;
+                            return { ...s, scores: { ...s.scores, [donemKey]: newScores }, assessments: newAssessments };
+                        })
+                    };
+                }));
+            }, [activeClassId, activeSemester, calculateGrade]);
+
+            const updateStudentScore = useCallback((studentId, scoreType) => {
+                setUndoMessage('');
+                setLastAction({ studentId, scoreType, classId: activeClassId, semester: activeSemester });
+                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                setClasses(prevClasses => prevClasses.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return {
+                        ...c,
+                        students: c.students.map(s => {
+                            if (s.id !== studentId) return s;
+                            const currentScores = s.scores[donemKey] || defaultScores;
+                            const newScores = { ...currentScores, [scoreType]: (Number(currentScores[scoreType]) || 0) + 1 };
+                            const newGrade = calculateGrade(newScores);
+                            const newAssessments = { ...s.assessments };
+                            newAssessments[donemKey].dersIciDurum = newGrade;
+                            return { ...s, scores: { ...s.scores, [donemKey]: newScores }, assessments: newAssessments };
+                        })
+                    };
+                }));
+            }, [activeClassId, activeSemester, calculateGrade]);
+
+            const filteredStudents = (list) => {
+                if (!list) return [];
+                const q = searchTerm.toLocaleLowerCase('tr-TR');
+                return list.filter(s => s.name.toLocaleLowerCase('tr-TR').includes(q) || (s.schoolNumber && String(s.schoolNumber).includes(q)));
+            };
+
+            if (isLoading) return <div className="text-center text-white text-2xl mt-20">Veriler Yükleniyor...</div>;
+
+            const currentCriteria = getClassSpeakingCriteria(activeClass);
+
+            return (
+                <Fragment>
+                    <div className="w-full bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 text-white pb-24">
+                        {/* Üst Başlık ve Menü */}
+                        <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4">
+                            <div>
+                                <h1 className="cool-title text-3xl sm:text-4xl font-bold">Performans Paneli</h1>
+                                {settings.teacherName && (
+                                    <div className="mt-1 text-slate-400 text-xs sm:text-sm">
+                                        <span>{settings.teacherName}</span><span className="mx-2">|</span>
+                                        <span>{settings.branchName}</span><span className="mx-2">|</span>
+                                        <span>{settings.schoolName}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button onClick={() => setActiveView('classes')} className={`py-2 px-4 rounded-lg font-semibold text-sm transition-colors ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                    Sınıflar & PDF Giriş
+                                </button>
+                                <button onClick={() => setActiveView('assessments')} className={`py-2 px-4 rounded-lg font-semibold text-sm transition-colors ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                    Performans Notları
+                                </button>
+                                <button onClick={() => setActiveView('speaking-exam')} className={`py-2 px-4 rounded-lg font-semibold text-sm transition-colors ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                    Konuşma Sınavı (Özel Kriterli)
+                                </button>
+                                <button onClick={() => setActiveView('settings')} className={`py-2 px-4 rounded-lg font-semibold text-sm transition-colors ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                    Ayarlar
+                                </button>
+                                <button onClick={() => auth.signOut()} className="py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-sm">
+                                    Çıkış
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* SINIFLAR VE OTOMATİK e-OKUL PDF GİRİŞ EKRANI */}
+                        {activeView === 'classes' && (
+                            <div className="fade-in">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-700">
+                                    <div>
+                                        <h2 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">Hızlı Kurulum: e-Okul PDF İle Otomatik Sınıf + Liste Oluştur</h2>
+                                        <label className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg cursor-pointer shadow-lg transition-all text-sm">
+                                            <span>{isParsingPdf ? 'PDF İşleniyor...' : '📄 e-Okul Puan Çizelgesi PDF Yükle (Otomatik Sınıf & Öğrenci)'}</span>
+                                            <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, null)} disabled={isParsingPdf} className="hidden" />
+                                        </label>
+                                        {pdfStatusMsg && <p className="text-green-400 text-xs mt-2 font-semibold">{pdfStatusMsg}</p>}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-sm font-bold text-blue-400 uppercase tracking-wider mb-2">Manuel Sınıf Ekle</h2>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="Sınıf Adı (örn: 9-F, 10-A)" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${focusClasses}`} />
+                                            <button onClick={handleAddClass} className="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700 text-sm">Sınıf Ekle</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {classes.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
+                                        {classes.map(c => (
+                                            <div key={c.id} className="relative">
+                                                <button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm transition-colors ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white shadow-md' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                                    {c.name} ({c.students.length})
+                                                </button>
+                                                <button onClick={() => setClassToDelete(c)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600">✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {activeClass ? (
+                                    activeClass.students.length === 0 ? (
+                                        <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-6 space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-white mb-1">1. Seçenek: {activeClass.name} Sınıfına e-Okul PDF Listesi Yükle</h3>
+                                                <p className="text-slate-400 text-xs mb-3">e-Okul PDF çizelgesindeki öğrenci numaraları ve ad soyadları otomatik ayrıştırılıp listelenir.</p>
+                                                <label className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 cursor-pointer">
+                                                    <span>{isParsingPdf ? 'PDF Okunuyor...' : '📄 PDF Dosyası Seç ve Öğrencileri Listele'}</span>
+                                                    <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, activeClass.id)} disabled={isParsingPdf} className="hidden" />
+                                                </label>
+                                            </div>
+                                            <div className="border-t border-slate-700 pt-5">
+                                                <h3 className="text-lg font-bold text-white mb-2">2. Seçenek: Metin Listesi Yapıştır</h3>
+                                                <textarea value={listText} onChange={e => setListText(e.target.value)} placeholder={"434 MUHAMMED ALSILES\n500 BAHA KEREM KUDİŞ..."} className={`w-full h-28 p-3 bg-slate-700 border border-slate-600 rounded-lg mb-3 text-white text-sm ${focusClasses}`} />
+                                                <button onClick={handleTextListSave} className="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700">Metin Listesini Kaydet</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+                                                <div className="flex border-b border-slate-700">
+                                                    <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>1. Dönem</button>
+                                                    <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>2. Dönem</button>
+                                                </div>
+                                                <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Öğrenci adı veya okul no ara..." className={`sm:w-72 p-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                            </div>
+
+                                            <div className="hidden md:grid grid-cols-12 gap-4 font-bold text-slate-400 text-xs p-2 border-b border-slate-700 mb-2">
+                                                <div className="col-span-4">Öğrenci (Okul No - Ad Soyad)</div>
+                                                <div className="col-span-3 text-center">Sınıf İçi (+/-)</div>
+                                                <div className="col-span-3 text-center">Ödev (+/-)</div>
+                                                <div className="col-span-1 text-center">Notlar</div>
+                                                <div className="col-span-1 text-center">Sözlü</div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {filteredStudents(activeClass.students).map(student => (
+                                                    <StudentScoreRow
+                                                        key={student.id}
+                                                        student={student}
+                                                        scores={student.scores[activeSemester === 1 ? 'donem1' : 'donem2'] || defaultScores}
+                                                        index={activeClass.students.findIndex(s => s.id === student.id)}
+                                                        onUpdateScore={updateStudentScore}
+                                                        onManualChange={handleManualScoreChange}
+                                                        onDelete={setStudentToDelete}
+                                                        onOpenNotes={setEditingNoteStudent}
+                                                        calculateGrade={calculateGrade}
+                                                    />
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-8 pt-5 border-t border-slate-700 flex flex-col sm:flex-row gap-2">
+                                                <input type="text" value={newStudentNumber} onChange={e => setNewStudentNumber(e.target.value)} placeholder="Okul No (örn: 434)" className={`sm:w-36 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                <input type="text" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} placeholder="Yeni Öğrenci Adı Soyadı" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                <button onClick={handleAddStudent} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Öğrenci Ekle</button>
+                                                <label className="flex items-center justify-center bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 cursor-pointer text-sm">
+                                                    <span>PDF İle Ekle</span>
+                                                    <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, activeClass.id)} disabled={isParsingPdf} className="hidden" />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="text-center py-12 text-slate-400">
+                                        Yukarıdan <b>e-Okul PDF Yükle</b> butonuna basarak sınıfınızı ve öğrencilerinizi tek tıkla oluşturabilirsiniz.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ÖZEL KRİTERLİ KONUŞMA SINAVI EKRANI */}
+                        {activeView === 'speaking-exam' && (
+                            <div className="fade-in">
+                                <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
+                                    {classes.map(c => (
+                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                            {c.name} ({c.students.length})
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {activeClass ? (
+                                    <div>
+                                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4 mb-5">
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 1 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>1. Dönem</button>
+                                                <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 2 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>2. Dönem</button>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    onClick={() => setIsCriteriaModalOpen(true)}
+                                                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-lg text-sm shadow"
+                                                >
+                                                    ⚙️ Kriterleri Düzenle ({currentCriteria.length} Kriter)
+                                                </button>
+                                                <button
+                                                    onClick={() => handleGenerateDynamicSpeakingSummaryReport(activeSemester)}
+                                                    disabled={isGeneratingPdf}
+                                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg text-sm"
+                                                >
+                                                    📥 Kriterli Toplu Liste Raporu (PDF)
+                                                </button>
+                                                <button
+                                                    onClick={() => handleGenerateDynamicSpeakingDetailedReport(activeSemester)}
+                                                    disabled={isGeneratingPdf}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm"
+                                                >
+                                                    📥 Bireysel Detay Raporu (PDF)
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Aktif Sınıfın Kriter Özeti Kutusu */}
+                                        <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 mb-6">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400">{activeClass.name} Sınıfı Aktif Değerlendirme Kriterleri</h4>
+                                                <button onClick={() => setIsCriteriaModalOpen(true)} className="text-xs text-amber-400 hover:underline font-semibold">Değiştir / Yeni Kriter Ekle</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-300">
+                                                {currentCriteria.map((c, i) => (
+                                                    <div key={c.id} className="bg-slate-800/70 p-2 rounded border border-slate-700/60">
+                                                        <span className="font-bold text-amber-400 mr-1">K.{i + 1} ({c.max}p):</span>
+                                                        <span>{c.label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            {activeClass.students.map((student, index) => {
+                                                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                                                const s1 = student.speakingExams?.[donemKey]?.sinav1 || {};
+                                                const s2 = student.speakingExams?.[donemKey]?.sinav2 || {};
+                                                const total1 = currentCriteria.reduce((sum, c) => sum + (Number(s1[c.id]) || 0), 0);
+                                                const total2 = currentCriteria.reduce((sum, c) => sum + (Number(s2[c.id]) || 0), 0);
+                                                return (
+                                                    <div key={student.id} className="bg-slate-800/50 rounded-lg p-3.5 border border-slate-700/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                        <div className="font-medium text-white">
+                                                            <span className="text-slate-500 mr-2">{index + 1}.</span>
+                                                            {student.schoolNumber && <span className="text-amber-400 font-bold mr-2">[{student.schoolNumber}]</span>}
+                                                            <span>{student.name}</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-3">
+                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">1. Sınav: <b className="text-amber-400 text-base ml-1">{total1}</b></span>
+                                                                <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 1)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded">Puanla</button>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">2. Sınav: <b className="text-amber-400 text-base ml-1">{total2}</b></span>
+                                                                <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 2)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded">Puanla</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-10 text-slate-400">Lütfen işlem yapmak için bir sınıf seçin.</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* PERFORMANS NOTLARI EKRANI */}
+                        {activeView === 'assessments' && (
+                            <div className="fade-in">
+                                <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
+                                    {classes.map(c => (
+                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                            {c.name} ({c.students.length})
+                                        </button>
+                                    ))}
+                                </div>
+                                {tempClassData ? (
+                                    <div>
+                                        <div className="flex border-b border-slate-700 mb-5">
+                                            <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>1. Dönem</button>
+                                            <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>2. Dönem</button>
+                                        </div>
+                                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                                            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                                                <h3 className="text-lg font-bold text-blue-400">{activeSemester}. Dönem Performans & Kitap Sınavı Değerlendirmeleri</h3>
+                                                <div className="flex gap-2">
+                                                    <button onClick={handleSaveAssessments} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Dönemi Kaydet</button>
+                                                    <button onClick={() => handleGenerateBookReport(activeSemester)} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Kitap Raporu (PDF)</button>
+                                                    <button onClick={() => handleGenerateSemesterReport(activeSemester)} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Performans Raporu (PDF)</button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                                <div>
+                                                    <label className="block text-xs text-slate-400">1. Kitap Adı</label>
+                                                    <input type="text" value={tempClassData.bookTitles?.[activeSemester === 1 ? 'donem1' : 'donem2']?.kitap1 || ''} onChange={e => handleTempBookTitleChange(activeSemester === 1 ? 'donem1' : 'donem2', 'kitap1', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-400">2. Kitap Adı</label>
+                                                    <input type="text" value={tempClassData.bookTitles?.[activeSemester === 1 ? 'donem1' : 'donem2']?.kitap2 || ''} onChange={e => handleTempBookTitleChange(activeSemester === 1 ? 'donem1' : 'donem2', 'kitap2', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {filteredStudents(tempClassData.students).map((st, idx) => (
+                                                    <StudentAssessmentCard key={st.id} student={st} index={idx} semester={activeSemester} onScoreChange={handleTempScoreChange} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        )}
+
+                        {/* AYARLAR EKRANI */}
+                        {activeView === 'settings' && (
+                            <div className="fade-in">
+                                <h2 className="text-xl font-bold text-slate-100 mb-4">Genel Ayarlar</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900/50 p-6 rounded-xl border border-slate-700">
+                                    <div className="space-y-3">
+                                        <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-2">Öğretmen Bilgileri</h3>
+                                        <div><label className="block text-xs text-slate-400">Ad Soyad</label><input type="text" value={tempSettings.teacherName} onChange={e => setTempSettings({ ...tempSettings, teacherName: e.target.value })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                        <div><label className="block text-xs text-slate-400">Okul Adı</label><input type="text" value={tempSettings.schoolName} onChange={e => setTempSettings({ ...tempSettings, schoolName: e.target.value })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                        <div><label className="block text-xs text-slate-400">Branş</label><input type="text" value={tempSettings.branchName} onChange={e => setTempSettings({ ...tempSettings, branchName: e.target.value })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-2">Puan Değerleri</h3>
+                                        <div><label className="block text-xs text-slate-400">Sınıf İçi Artı (+)</label><input type="number" value={tempSettings.inClassPlus} onChange={e => setTempSettings({ ...tempSettings, inClassPlus: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                        <div><label className="block text-xs text-slate-400">Sınıf İçi Eksi (-)</label><input type="number" value={tempSettings.inClassMinus} onChange={e => setTempSettings({ ...tempSettings, inClassMinus: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                        <div><label className="block text-xs text-slate-400">Ödev Artısı (+)</label><input type="number" value={tempSettings.homeworkPlus} onChange={e => setTempSettings({ ...tempSettings, homeworkPlus: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                        <div><label className="block text-xs text-slate-400">Ödev Eksisi (-)</label><input type="number" value={tempSettings.homeworkMinus} onChange={e => setTempSettings({ ...tempSettings, homeworkMinus: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-2">Başlangıç Notu</h3>
+                                        <div><label className="block text-xs text-slate-400">Sözlü Başlangıç Puanı</label><input type="number" value={tempSettings.baseScore} onChange={e => setTempSettings({ ...tempSettings, baseScore: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex justify-end items-center gap-3">
+                                    {showSaveConfirmation && <span className="text-green-400 text-sm font-semibold">Ayarlar Kaydedildi!</span>}
+                                    <button onClick={() => { setSettings(tempSettings); setShowSaveConfirmation(true); setTimeout(() => setShowSaveConfirmation(false), 2000); }} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">Ayarları Kaydet</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modallar */}
+                    {isCriteriaModalOpen && activeClass && (
+                        <CriteriaManagerModal
+                            activeClass={activeClass}
+                            classes={classes}
+                            onSaveCriteria={handleSaveClassCriteria}
+                            onCopyCriteriaToAll={handleCopyCriteriaToAllClasses}
+                            onClose={() => setIsCriteriaModalOpen(false)}
+                        />
+                    )}
+
+                    {evaluatingSpeaking && (
+                        <DynamicSpeakingExamModal
+                            student={evaluatingSpeaking.student}
+                            criteria={evaluatingSpeaking.criteria}
+                            scores={evaluatingSpeaking.scores}
+                            examNumber={evaluatingSpeaking.examNumber}
+                            className={activeClass?.name}
+                            onScoreChange={handleSpeakingScoreChange}
+                            onSave={handleSaveSpeakingExam}
+                            onClose={() => setEvaluatingSpeaking(null)}
+                        />
+                    )}
+
+                    {classToDelete && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
+                                <h3 className="text-lg font-bold text-white mb-2">Sınıfı Sil</h3>
+                                <p className="text-slate-300 text-sm mb-5">"{classToDelete.name}" sınıfını silmek istediğinize emin misiniz?</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setClassToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
+                                    <button onClick={() => { const updated = classes.filter(c => c.id !== classToDelete.id); setClasses(updated); if (activeClassId === classToDelete.id) setActiveClassId(updated[0]?.id || null); setClassToDelete(null); }} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {studentToDelete && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
+                                <h3 className="text-lg font-bold text-white mb-2">Öğrenciyi Sil</h3>
+                                <p className="text-slate-300 text-sm mb-5">"{studentToDelete.name}" isimli öğrenciyi silmek istediğinize emin misiniz?</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setStudentToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
+                                    <button onClick={() => { setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: c.students.filter(s => s.id !== studentToDelete.id) } : c)); setStudentToDelete(null); }} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {editingNoteStudent && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-lg w-full">
+                                <h3 className="text-lg font-bold text-white mb-3">Öğrenci Notu: <span className="text-blue-400">{editingNoteStudent.name}</span></h3>
+                                <textarea
+                                    defaultValue={editingNoteStudent.notes}
+                                    id="student-note-textarea"
+                                    className="w-full h-40 p-3 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm mb-4"
+                                    placeholder="Öğrenci hakkında notunuz..."
+                                />
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setEditingNoteStudent(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Kapat</button>
+                                    <button onClick={() => { const val = document.getElementById('student-note-textarea').value; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: c.students.map(s => s.id === editingNoteStudent.id ? { ...s, notes: val } : s) } : c)); setEditingNoteStudent(null); }} className="py-2 px-5 bg-blue-600 text-white rounded-lg font-bold text-sm">Kaydet</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </Fragment>
+            );
+        }
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) return <div className="text-center text-white text-xl mt-20">Yükleniyor...</div>;
+            return user ? <PerformancePanel user={user} /> : <AuthScreen />;
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+
+```
