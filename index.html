@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -138,12 +137,6 @@
             });
         };
 
-        const Icon = ({ d, size = 18 }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
-            </svg>
-        );
-
         const focusClasses = "focus:outline-none focus:ring-2 focus:ring-blue-500";
 
         function AuthScreen() {
@@ -189,6 +182,34 @@
             );
         }
 
+        // Öğrenci Bilgilerini Düzenleme Modalı
+        const EditStudentModal = ({ student, onSave, onClose }) => {
+            const [no, setNo] = useState(student.schoolNumber || '');
+            const [name, setName] = useState(student.name || '');
+
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
+                    <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full shadow-2xl">
+                        <h3 className="text-lg font-bold text-white mb-4">Öğrenci Bilgilerini Düzenle</h3>
+                        <div className="space-y-3 mb-5">
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-1">Okul Numarası</label>
+                                <input type="text" value={no} onChange={e => setNo(e.target.value)} className={`w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${focusClasses}`} />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-1">Adı Soyadı</label>
+                                <input type="text" value={name} onChange={e => setName(e.target.value)} className={`w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${focusClasses}`} />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button onClick={onClose} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm font-semibold">Vazgeç</button>
+                            <button onClick={() => onSave(student.id, no.trim(), name.replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR'))} className="py-2 px-5 bg-blue-600 text-white rounded-lg font-bold text-sm">Güncelle</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const CriteriaManagerModal = ({ activeClass, onSaveCriteria, onCopyCriteriaToAll, onClose }) => {
             const initialCriteria = (activeClass.speakingCriteria && activeClass.speakingCriteria.length > 0)
                 ? activeClass.speakingCriteria
@@ -196,26 +217,6 @@
 
             const [items, setItems] = useState(JSON.parse(JSON.stringify(initialCriteria)));
             const totalMax = items.reduce((sum, item) => sum + (Number(item.max) || 0), 0);
-
-            const handleLabelChange = (index, val) => {
-                setItems(prev => prev.map((it, idx) => idx === index ? { ...it, label: val } : it));
-            };
-
-            const handleMaxChange = (index, val) => {
-                setItems(prev => prev.map((it, idx) => idx === index ? { ...it, max: Number(val) || 0 } : it));
-            };
-
-            const handleAddCriterion = () => {
-                setItems(prev => [...prev, { id: 'krit_' + Date.now(), label: 'Yeni değerlendirme ölçütü...', max: 10 }]);
-            };
-
-            const handleRemoveCriterion = (index) => {
-                setItems(prev => prev.filter((_, idx) => idx !== index));
-            };
-
-            const applyPreset = (preset) => {
-                setItems(JSON.parse(JSON.stringify(preset)));
-            };
 
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
@@ -230,8 +231,8 @@
                         <div className="px-5 py-3 bg-slate-900/60 border-b border-slate-700 flex flex-wrap gap-2 items-center justify-between">
                             <div className="flex flex-wrap gap-2 items-center">
                                 <span className="text-xs text-slate-400">Şablon Yükle:</span>
-                                <button onClick={() => applyPreset(DEFAULT_SPEAKING_PRESET)} className="text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-1.5 px-3 rounded-md font-medium">Standart (5 Kriter)</button>
-                                <button onClick={() => applyPreset(NINTH_GRADE_SPEAKING_PRESET)} className="text-xs bg-slate-700 hover:bg-slate-600 text-purple-300 py-1.5 px-3 rounded-md font-medium">9. Sınıf (7 Kriter)</button>
+                                <button onClick={() => setItems(JSON.parse(JSON.stringify(DEFAULT_SPEAKING_PRESET)))} className="text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-1.5 px-3 rounded-md font-medium">Standart (5 Kriter)</button>
+                                <button onClick={() => setItems(JSON.parse(JSON.stringify(NINTH_GRADE_SPEAKING_PRESET)))} className="text-xs bg-slate-700 hover:bg-slate-600 text-purple-300 py-1.5 px-3 rounded-md font-medium">9. Sınıf (7 Kriter)</button>
                             </div>
                             <div className={`text-sm font-bold px-3 py-1 rounded-md ${totalMax === 100 ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
                                 Toplam Puan: {totalMax} / 100
@@ -241,15 +242,15 @@
                             {items.map((item, idx) => (
                                 <div key={item.id || idx} className="flex items-start gap-2 bg-slate-900/50 p-3 rounded-lg border border-slate-700/70">
                                     <span className="bg-slate-700 text-slate-300 text-xs font-bold px-2 py-1.5 rounded mt-1">K.{idx + 1}</span>
-                                    <textarea rows="2" value={item.label} onChange={e => handleLabelChange(idx, e.target.value)} className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-sm text-white ${focusClasses}`} placeholder="Açıklama..." />
+                                    <textarea rows="2" value={item.label} onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, label: e.target.value } : it))} className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-md text-sm text-white ${focusClasses}`} placeholder="Açıklama..." />
                                     <div className="flex flex-col items-center">
                                         <label className="text-[10px] text-slate-400 mb-0.5">Maks</label>
-                                        <input type="number" value={item.max} onChange={e => handleMaxChange(idx, e.target.value)} className={`w-16 p-1.5 text-center bg-slate-700 border border-slate-600 rounded-md font-bold text-amber-400 ${focusClasses}`} />
+                                        <input type="number" value={item.max} onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, max: Number(e.target.value) || 0 } : it))} className={`w-16 p-1.5 text-center bg-slate-700 border border-slate-600 rounded-md font-bold text-amber-400 ${focusClasses}`} />
                                     </div>
-                                    <button onClick={() => handleRemoveCriterion(idx)} className="mt-4 p-2 text-red-400 hover:bg-red-500/20 rounded-md text-xs font-bold">Sil</button>
+                                    <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="mt-4 p-2 text-red-400 hover:bg-red-500/20 rounded-md text-xs font-bold">Sil</button>
                                 </div>
                             ))}
-                            <button onClick={handleAddCriterion} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-blue-400 rounded-lg font-semibold text-sm">+ Yeni Kriter Ekle</button>
+                            <button onClick={() => setItems(prev => [...prev, { id: 'krit_' + Date.now(), label: 'Yeni ölçüt...', max: 10 }])} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-blue-400 rounded-lg font-semibold text-sm">+ Yeni Kriter Ekle</button>
                         </div>
                         <div className="p-5 border-t border-slate-700 bg-slate-800/90 flex flex-wrap justify-between items-center gap-3">
                             <button onClick={() => onCopyCriteriaToAll(items)} className="py-2 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold">Tüm Sınıflara Uygula</button>
@@ -357,13 +358,14 @@
             );
         });
 
-        const StudentScoreRow = memo(({ student, scores, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, calculateGrade }) => {
+        const StudentScoreRow = memo(({ student, scores, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, onOpenEdit, calculateGrade }) => {
             const calculatedGrade = calculateGrade(scores);
             return (
                 <div className="bg-slate-800/50 rounded-lg p-3.5 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/40 border border-slate-700/40">
                     <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0">
                         <span className="text-slate-500 font-semibold w-6">{index + 1}.</span>
                         <button onClick={() => onDelete(student)} className="p-1 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded" title="Sil">✕</button>
+                        <button onClick={() => onOpenEdit(student)} className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded" title="Düzenle"><EditIcon /></button>
                         {student.schoolNumber && <span className="text-amber-400 font-bold text-sm">[{student.schoolNumber}]</span>}
                         <span className="truncate">{student.name}</span>
                     </div>
@@ -406,6 +408,7 @@
             const [classes, setClasses] = useState([]);
             const [activeClassId, setActiveClassId] = useState(null);
             const [editingNoteStudent, setEditingNoteStudent] = useState(null);
+            const [editingStudent, setEditingStudent] = useState(null);
             const [classToDelete, setClassToDelete] = useState(null);
             const [studentToDelete, setStudentToDelete] = useState(null);
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -515,7 +518,6 @@
                 return () => clearTimeout(handler);
             }, [classes, settings, user, isLoading, activeView]);
 
-            // Sınıf veya Görünüm değiştiğinde Performans Notları ekranındaki tempClassData'yı güncelle
             useEffect(() => {
                 if (activeClass) {
                     setTempClassData(JSON.parse(JSON.stringify(activeClass)));
@@ -529,7 +531,6 @@
                 setActiveClassId(id);
             };
 
-            // PDF Dosyasından Sınıf ve Öğrenci Aktarma
             const handleEokulPdfUpload = async (e, targetClassId = null) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -585,7 +586,7 @@
                             if (matchTwoNums) {
                                 const n1 = parseInt(matchTwoNums[1], 10);
                                 const n2 = parseInt(matchTwoNums[2], 10);
-                                const rawName = matchTwoNums[3].trim();
+                                const rawName = matchTwoNums[3].replace(/\s+/g, ' ').trim();
                                 const upperName = rawName.toLocaleUpperCase('tr-TR');
                                 const isBlacklisted = blacklist.some(w => upperName.includes(w));
 
@@ -603,7 +604,7 @@
                                     } else {
                                         schoolNo = Math.max(n1, n2);
                                     }
-                                    extractedStudents.push({ schoolNumber: String(schoolNo), name: rawName });
+                                    extractedStudents.push({ schoolNumber: String(schoolNo), name: upperName });
                                 }
                             }
                         });
@@ -785,7 +786,7 @@
                 const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
                 const pages = Array.from(container.children);
                 const process = (idx) => {
-                    if (idx >= pages.length) { pdf.save(`${activeClass.name} - Konuşma Özet Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    if (idx >= pages.length) { pdf.save(`${activeClass.name} - Konuşma Sınavı Özet Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
                     window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => {
                         if (idx > 0) pdf.addPage('a4', 'landscape');
                         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210, undefined, 'FAST');
@@ -818,8 +819,8 @@
                             <div style="text-align: center; margin-bottom: 8mm;"><h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 14px;">${activeClass.name} Sınıfı Konuşma Sınavı Bireysel Formu (${semester}. Dönem)</h2></div>
                             <p style="font-size: 12px; margin-bottom: 8mm;"><b>Öğrenci:</b> ${student.schoolNumber ? `[${student.schoolNumber}] ` : ''}${student.name}</p>
                             <div style="display: flex; gap: 8mm; justify-content: space-between;">
-                                <div style="flex: 1;"><h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 4mm;">1. Sınav (Top: ${t1})</h3><table style="width: 100%; border-collapse: collapse; font-size: 9.5px;"><thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Puan</th></tr></thead><tbody>${scoreRows(s1)}</tbody></table></div>
-                                <div style="flex: 1;"><h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 4mm;">2. Sınav (Top: ${t2})</h3><table style="width: 100%; border-collapse: collapse; font-size: 9.5px;"><thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ccc; padding: 6px; text-align: center;">Puan</th></tr></thead><tbody>${scoreRows(s2)}</tbody></table></div>
+                                <div style="flex: 1;"><h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 4mm;">1. Sınav (Top: ${t1})</h3><table style="width: 100%; border-collapse: collapse; font-size: 9.5px;"><thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Puan</th></tr></thead><tbody>${scoreRows(s1)}</tbody></table></div>
+                                <div style="flex: 1;"><h3 style="font-size: 12px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 2mm; margin-bottom: 4mm;">2. Sınav (Top: ${t2})</h3><table style="width: 100%; border-collapse: collapse; font-size: 9.5px;"><thead><tr style="background-color: #f1f5f9;"><th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Ölçüt</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Maks</th><th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Puan</th></tr></thead><tbody>${scoreRows(s2)}</tbody></table></div>
                             </div>
                         </div>
                         <div style="font-size: 10px; text-align: right; border-top: 1px solid #eee; padding-top: 5px;">${footerHtml}</div>
@@ -905,22 +906,309 @@
                 };
                 process(0);
             };
+            
+            const handleGeneratePlusMinusReport = () => {
+                if (!activeClass) return;
+                setIsGeneratingPdf(true);
+                const students = activeClass.students;
+                const studentsPerPage = 23;
+                const numPages = Math.ceil(students.length / studentsPerPage);
+                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const studentChunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const studentRows = studentChunk.map((student, index) => {
+                        const globalIndex = i * studentsPerPage + index + 1;
+                        const scores = student.scores[donemKey] || defaultScores;
+                        return `<tr><td style="border: 1px solid #eee; padding: 7px;">${student.schoolNumber || globalIndex}</td><td style="border: 1px solid #eee; padding: 7px; text-align: left;">${student.name}</td><td style="border: 1px solid #eee; text-align: center;">${scores.inClassPlus}</td><td style="border: 1px solid #eee; text-align: center;">${scores.inClassMinus}</td><td style="border: 1px solid #eee; text-align: center;">${scores.homeworkPlus}</td><td style="border: 1px solid #eee; text-align: center;">${scores.homeworkMinus}</td></tr>`;
+                    }).join('');
+                    const footerHtml = (i === numPages - 1) ? `<div style="text-align: right; font-size: 12px; margin-top: 10mm;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen'}</p><p>${settings.branchName || 'Branş'}</p></div>` : '<div></div>';
+                    htmlContent += `<div style="box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm 20mm 24mm 20mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="text-align: center;"><h1 style="font-size: 20px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 16px;">${activeClass.name} Sınıfı ${activeSemester}. Dönem Artı/Eksi Raporu (Sayfa ${i+1}/${numPages})</h2></div><table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 15px;"><thead><tr><th style="text-align: left; padding: 7px; border-bottom: 2px solid #333;">Okul No</th><th style="text-align: left; padding: 7px; border-bottom: 2px solid #333;">Öğrenci Adı</th><th style="text-align: center; border-bottom: 2px solid #333;">Sınıf İçi +</th><th style="text-align: center; border-bottom: 2px solid #333;">Sınıf İçi -</th><th style="text-align: center; border-bottom: 2px solid #333;">Ödev +</th><th style="text-align: center; border-bottom: 2px solid #333;">Ödev -</th></tr></thead><tbody>${studentRows}</tbody></table></div>${footerHtml}</div>`;
+                }
+                const container = document.createElement('div'); container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) { pdf.save(`${activeClass.name} - Artı Eksi.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
+                };
+                process(0);
+            };
+
+            const handleGenerateSemesterReport = (semester) => {
+                if (!tempClassData) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const students = tempClassData.students;
+                const studentsPerPage = 18;
+                const numPages = Math.ceil(students.length / studentsPerPage);
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const chunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const rows = chunk.map((s, idx) => {
+                        const globalIdx = i * studentsPerPage + idx + 1;
+                        const ass = s.assessments[donemKey] || {};
+                        const perf1 = calculateWeightedPerf1(ass);
+                        const perf2Notes = [ass.kitap1, ass.kitap2].filter(n => n !== null && n !== undefined && n !== '' && !isNaN(n));
+                        const perf2 = perf2Notes.length > 0 ? Math.round(perf2Notes.reduce((a, b) => a + Number(b), 0) / perf2Notes.length) : '-';
+                        return `<tr style="text-align: center;"><td style="border: 1px solid #333; padding: 5px;">${s.schoolNumber || globalIdx}</td><td style="border: 1px solid #333; padding: 5px; text-align: left;">${s.name}</td><td style="border: 1px solid #333; padding: 5px;">${ass.dersIciDurum ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.yazma1 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.yazma2 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px; background-color: #e0f2fe;"><b>${perf1 ?? '-'}</b></td><td style="border: 1px solid #333; padding: 5px;">${ass.kitap1 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px;">${ass.kitap2 ?? '-'}</td><td style="border: 1px solid #333; padding: 5px; background-color: #ffedd5;"><b>${perf2}</b></td></tr>`;
+                    }).join('');
+                    const footer = (i === numPages - 1) ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px; margin-top: 5mm;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen'} (${settings.branchName || 'Branş'})</p></div>` : '<div></div>';
+                    htmlContent += `<div style="box-sizing: border-box; width: 210mm; height: 297mm; padding: 15mm 15mm 22mm 15mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="text-align: center;"><h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 14px;">${tempClassData.name} Sınıfı ${semester}. Dönem Performans Notları (Sayfa ${i + 1}/${numPages})</h2><p style="font-size: 9px; color: #555;">1. Performans: %50 Ders İçi Durum + %50 Yazma Görevleri Ortalaması</p></div><table style="width: 100%; border-collapse: collapse; font-size: 9px; margin-top: 12px;"><thead><tr style="background-color: #f2f2f2;"><th style="border: 1px solid #333; padding: 5px;">Okul No</th><th style="border: 1px solid #333; padding: 5px; text-align: left; width: 30%;">Öğrenci</th><th style="border: 1px solid #333; padding: 5px;">Ders İçi (%50)</th><th style="border: 1px solid #333; padding: 5px;">Yazma 1 (%25)</th><th style="border: 1px solid #333; padding: 5px;">Yazma 2 (%25)</th><th style="border: 1px solid #333; padding: 5px;">Perf. 1</th><th style="border: 1px solid #333; padding: 5px;">Kitap 1</th><th style="border: 1px solid #333; padding: 5px;">Kitap 2</th><th style="border: 1px solid #333; padding: 5px;">Perf. 2</th></tr></thead><tbody>${rows}</tbody></table></div>${footer}</div>`;
+                }
+                const container = document.createElement('div'); container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Performans Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
+                };
+                process(0);
+            };
+
+            const handleGenerateBookReport = (semester) => {
+                if (!tempClassData) return;
+                setIsGeneratingPdf(true);
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const bookTitles = tempClassData.bookTitles?.[donemKey] || { kitap1: '', kitap2: '' };
+                const students = tempClassData.students;
+                const studentsPerPage = 22; 
+                const numPages = Math.ceil(students.length / studentsPerPage);
+                let htmlContent = '';
+                for (let i = 0; numPages > i; i++) {
+                    const chunk = students.slice(i * studentsPerPage, (i + 1) * studentsPerPage);
+                    const rows = chunk.map((s, index) => {
+                        const globalIdx = i * studentsPerPage + index + 1;
+                        const ass = s.assessments[donemKey] || {};
+                        return `<tr style="text-align: center;"><td style="border: 1px solid #eee; padding: 7px;">${s.schoolNumber || globalIdx}</td><td style="border: 1px solid #eee; padding: 7px; text-align: left;">${s.name}</td><td style="border: 1px solid #eee; padding: 7px;">${ass.kitap1 ?? '-'}</td><td style="border: 1px solid #eee; padding: 7px;">${ass.kitap2 ?? '-'}</td></tr>`;
+                    }).join('');
+                    const footer = (i === numPages - 1) ? `<div style="text-align: right; font-size: 10px; border-top: 1px solid #eee; padding-top: 5px; margin-top: 5mm;"><p style="font-weight: bold;">${settings.teacherName || 'Öğretmen'} (${settings.branchName || 'Branş'})</p></div>` : '<div></div>';
+                    htmlContent += `<div style="box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm 20mm 25mm 20mm; background: white; color: black; font-family: sans-serif; display: flex; flex-direction: column; justify-content: space-between;"><div><div style="text-align: center; margin-bottom: 8mm;"><h1 style="font-size: 16px; font-weight: bold;">${settings.schoolName || 'OKUL ADI'}</h1><h2 style="font-size: 14px;">${tempClassData.name} Sınıfı ${semester}. Dönem Kitap Sınav Notları (Sayfa ${i + 1}/${numPages})</h2><p style="font-size: 10px; margin-top: 4px;"><b>1. Kitap:</b> ${bookTitles.kitap1 || 'Belirtilmemiş'} | <b>2. Kitap:</b> ${bookTitles.kitap2 || 'Belirtilmemiş'}</p></div><table style="width: 100%; border-collapse: collapse; font-size: 11px;"><thead><tr><th style="padding: 7px; text-align: left; border-bottom: 2px solid #333;">Okul No</th><th style="padding: 7px; text-align: left; border-bottom: 2px solid #333; width: 55%;">Öğrenci Adı</th><th style="padding: 7px; text-align: center; border-bottom: 2px solid #333;">1. Kitap</th><th style="padding: 7px; text-align: center; border-bottom: 2px solid #333;">2. Kitap</th></tr></thead><tbody>${rows}</tbody></table></div>${footer}</div>`;
+                }
+                const container = document.createElement('div'); container.style.position = 'absolute'; container.style.left = '-9999px'; container.style.width = '210mm';
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pages = Array.from(container.children);
+                const process = (idx) => {
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Kitap Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
+                };
+                process(0);
+            };
+
+            const handleAddClass = () => {
+                if (newClassName.trim() === '') return;
+                const clsName = newClassName.trim().toUpperCase();
+                const isNinth = clsName.startsWith('9');
+                const newClass = {
+                    id: Date.now(),
+                    name: clsName,
+                    students: [],
+                    bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)),
+                    speakingCriteria: isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET
+                };
+                setClasses(prev => [...prev, newClass]);
+                setActiveClassId(newClass.id);
+                setNewClassName('');
+            };
+
+            const handleAddStudent = () => {
+                if (newStudentName.trim() === '' || !activeClassId) return;
+                const baseScoreVal = settings.baseScore;
+                const newStudent = {
+                    id: Date.now(),
+                    schoolNumber: newStudentNumber.trim(),
+                    name: newStudentName.replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR'),
+                    notes: '',
+                    scores: { donem1: { ...defaultScores }, donem2: { ...defaultScores } },
+                    assessments: {
+                        donem1: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+                        donem2: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+                    },
+                    speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
+                };
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c));
+                setNewStudentNumber('');
+                setNewStudentName('');
+            };
+
+            const handleUpdateStudentInfo = (studentId, newNo, newName) => {
+                setClasses(prev => prev.map(c => c.id === activeClassId ? {
+                    ...c,
+                    students: sortStudentsList(c.students.map(s => s.id === studentId ? { ...s, schoolNumber: newNo, name: newName } : s))
+                } : c));
+                setEditingStudent(null);
+            };
+
+            const handleTextListSave = () => {
+                if (!activeClassId) return;
+                const lines = listText.split('\n').filter(line => line.trim() !== '');
+                const baseScoreVal = settings.baseScore;
+                const newStudents = lines.map((line, index) => {
+                    let cleanLine = line.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+                    let schoolNo = '';
+                    let studentName = cleanLine;
+                    const m2 = cleanLine.match(/^(\d+)\s+(\d+)\s+(.+)$/);
+                    const m1 = cleanLine.match(/^(\d+)[\.\-\s]+(.+)$/);
+                    if (m2) {
+                        const n1 = parseInt(m2[1], 10);
+                        const n2 = parseInt(m2[2], 10);
+                        schoolNo = String(60 >= n1 && n2 > 60 ? n2 : (60 >= n2 && n1 > 60 ? n1 : Math.max(n1, n2)));
+                        studentName = m2[3].trim();
+                    } else if (m1) {
+                        schoolNo = m1[1].trim();
+                        studentName = m1[2].trim();
+                    }
+                    return {
+                        id: Date.now() + index,
+                        schoolNumber: schoolNo,
+                        name: studentName.replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR'),
+                        notes: '',
+                        scores: { donem1: { ...defaultScores }, donem2: { ...defaultScores } },
+                        assessments: {
+                            donem1: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null },
+                            donem2: { dersIciDurum: baseScoreVal, yazma1: null, yazma2: null, kitap1: null, kitap2: null }
+                        },
+                        speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
+                    };
+                });
+                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c));
+                setListText('');
+            };
+
+            const handleTempSettingsChange = (e) => {
+                const { name, value } = e.target;
+                const isNumeric = ['inClassPlus', 'inClassMinus', 'homeworkPlus', 'homeworkMinus', 'baseScore'].includes(name);
+                setTempSettings(prev => ({ ...prev, [name]: isNumeric ? Number(value) : value }));
+            };
+
+            const calculateGrade = useCallback((scores) => {
+                if (!scores) return settings.baseScore;
+                const score = settings.baseScore + (scores.inClassPlus * settings.inClassPlus) + (scores.inClassMinus * settings.inClassMinus) + (scores.homeworkPlus * settings.homeworkPlus) + (scores.homeworkMinus * settings.homeworkMinus);
+                return Math.max(0, Math.min(100, score));
+            }, [settings]);
+
+            const handleManualScoreChange = useCallback((studentId, scoreType, value) => {
+                const scoreToSet = value === '' ? 0 : Math.max(0, Number(value));
+                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                setClasses(prevClasses => prevClasses.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return {
+                        ...c,
+                        students: c.students.map(s => {
+                            if (s.id !== studentId) return s;
+                            const currentScores = s.scores[donemKey] || defaultScores;
+                            const newScores = { ...currentScores, [scoreType]: scoreToSet };
+                            const newGrade = calculateGrade(newScores);
+                            const newAssessments = { ...s.assessments };
+                            newAssessments[donemKey].dersIciDurum = newGrade;
+                            return { ...s, scores: { ...s.scores, [donemKey]: newScores }, assessments: newAssessments };
+                        })
+                    };
+                }));
+            }, [activeClassId, activeSemester, calculateGrade]);
+
+            const updateStudentScore = useCallback((studentId, scoreType) => {
+                setUndoMessage('');
+                setLastAction({ studentId, scoreType, classId: activeClassId, semester: activeSemester });
+                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                setClasses(prevClasses => prevClasses.map(c => {
+                    if (c.id !== activeClassId) return c;
+                    return {
+                        ...c,
+                        students: c.students.map(s => {
+                            if (s.id !== studentId) return s;
+                            const currentScores = s.scores[donemKey] || defaultScores;
+                            const newScores = { ...currentScores, [scoreType]: (Number(currentScores[scoreType]) || 0) + 1 };
+                            const newGrade = calculateGrade(newScores);
+                            const newAssessments = { ...s.assessments };
+                            newAssessments[donemKey].dersIciDurum = newGrade;
+                            return { ...s, scores: { ...s.scores, [donemKey]: newScores }, assessments: newAssessments };
+                        })
+                    };
+                }));
+            }, [activeClassId, activeSemester, calculateGrade]);
+
+            const handleUndoLastAction = () => {
+                if (!lastAction) return;
+                const { studentId, scoreType, classId, semester } = lastAction;
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                let studentName = '';
+                setClasses(prev => prev.map(c => {
+                    if (c.id !== classId) return c;
+                    return {
+                        ...c,
+                        students: c.students.map(s => {
+                            const currentScores = s.scores[donemKey] || defaultScores;
+                            if (s.id === studentId && currentScores[scoreType] > 0) {
+                                studentName = s.name;
+                                const newScores = { ...currentScores, [scoreType]: currentScores[scoreType] - 1 };
+                                const newGrade = calculateGrade(newScores);
+                                const newAssessments = { ...s.assessments };
+                                newAssessments[donemKey].dersIciDurum = newGrade;
+                                return { ...s, scores: { ...s.scores, [donemKey]: newScores }, assessments: newAssessments };
+                            }
+                            return s;
+                        })
+                    };
+                }));
+                setUndoMessage(`${studentName} isimli öğrencinin son puanı geri alındı.`);
+                setLastAction(null);
+                setTimeout(() => setUndoMessage(''), 3000);
+            };
+
+            const distributeScores = (totalScore, criteria) => {
+                let distributed = {}; let currentTotal = 0;
+                const scoresWithDiff = Object.entries(criteria).map(([key, { max }]) => {
+                    const rawScore = (totalScore / 100) * max;
+                    const roundedScore = Math.round(rawScore);
+                    currentTotal += roundedScore;
+                    return { key, max, rounded: roundedScore, diff: roundedScore - rawScore };
+                });
+                let difference = totalScore - currentTotal;
+                scoresWithDiff.sort((a, b) => a.diff - b.diff);
+                while (difference !== 0) {
+                    for (const item of scoresWithDiff) {
+                        if (difference === 0) break;
+                        if (difference > 0 && item.max > item.rounded) { item.rounded++; difference--; }
+                        else if (0 > difference && item.rounded > 0) { item.rounded--; difference++; }
+                    }
+                }
+                scoresWithDiff.forEach(item => { distributed[item.key] = item.rounded; });
+                return distributed;
+            };
+
+            const filteredStudents = (list) => {
+                if (!list) return [];
+                const q = searchTerm.toLocaleLowerCase('tr-TR');
+                return list.filter(s => s.name.toLocaleLowerCase('tr-TR').includes(q) || (s.schoolNumber && String(s.schoolNumber).includes(q)));
+            };
+
+            if (isLoading) return <div className="text-center text-white text-xl mt-20">Veriler Yükleniyor...</div>;
+
+            const currentCriteria = getClassSpeakingCriteria(activeClass);
 
             return (
                 <Fragment>
                     <div className="w-full bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 text-white pb-24">
-                        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
-                             <div>
-                                 <h1 className="cool-title text-3xl font-bold">Performans Paneli</h1>
-                                 {settings.teacherName && (<div className="teacher-info mt-1 text-slate-400 text-xs sm:text-sm"><span>{settings.teacherName}</span><span className="mx-2">|</span><span>{settings.branchName}</span><span className="mx-2">|</span><span>{settings.schoolName}</span></div>)}
-                             </div>
-                             <div className="flex flex-wrap gap-2">
-                                 <button onClick={() => setActiveView('classes')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Sınıflar & PDF Giriş</button>
-                                 <button onClick={() => setActiveView('assessments')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Performans Notları</button>
-                                 <button onClick={() => setActiveView('speaking-exam')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Konuşma Sınavı</button>
-                                 <button onClick={() => setActiveView('settings')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Ayarlar</button>
-                                 <button onClick={() => auth.signOut()} className="py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-sm">Çıkış</button>
-                             </div>
+                        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4">
+                            <div>
+                                <h1 className="cool-title text-3xl font-bold">Performans Paneli</h1>
+                                {settings.teacherName && (<div className="teacher-info mt-1 text-slate-400 text-xs sm:text-sm"><span>{settings.teacherName}</span><span className="mx-2">|</span><span>{settings.branchName}</span><span className="mx-2">|</span><span>{settings.schoolName}</span></div>)}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button onClick={() => setActiveView('classes')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Sınıflar & PDF Giriş</button>
+                                <button onClick={() => setActiveView('assessments')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Performans Notları</button>
+                                <button onClick={() => setActiveView('speaking-exam')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Konuşma Sınavı</button>
+                                <button onClick={() => setActiveView('settings')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Ayarlar</button>
+                                <button onClick={() => auth.signOut()} className="py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-sm">Çıkış</button>
+                            </div>
                         </div>
 
                         {activeView === 'settings' && (
@@ -1026,10 +1314,13 @@
                                         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                                             <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                                                 <h3 className="text-lg font-bold text-blue-400">{activeSemester}. Dönem Performans & Kitap Sınavı Değerlendirmeleri</h3>
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap gap-2">
                                                     <button onClick={handleSaveAssessments} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Dönemi Kaydet</button>
                                                     <button onClick={() => handleGenerateBookReport(activeSemester)} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Kitap Raporu (PDF)</button>
-                                                    <button onClick={() => handleGenerateSemesterReport(activeSemester)} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Performans Raporu (PDF)</button>
+                                                    <button onClick={handleGenerateSimplePdf} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Basit Rapor</button>
+                                                    <button onClick={handleGeneratePlusMinusReport} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Artı/Eksi Raporu</button>
+                                                    <button onClick={handleGenerateDetailedPdf} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Detaylı Rapor</button>
+                                                    <button onClick={() => handleGenerateSemesterReport(activeSemester)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Performans Raporu (PDF)</button>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -1131,6 +1422,7 @@
                                                         onManualChange={handleManualScoreChange}
                                                         onDelete={setStudentToDelete}
                                                         onOpenNotes={setEditingNoteStudent}
+                                                        onOpenEdit={setEditingStudent}
                                                         calculateGrade={calculateGrade}
                                                     />
                                                 ))}
@@ -1178,6 +1470,14 @@
                             onScoreChange={handleSpeakingScoreChange}
                             onSave={handleSaveSpeakingExam}
                             onClose={() => setEvaluatingSpeaking(null)}
+                        />
+                    )}
+
+                    {editingStudent && (
+                        <EditStudentModal
+                            student={editingStudent}
+                            onSave={handleUpdateStudentInfo}
+                            onClose={() => setEditingStudent(null)}
                         />
                     )}
 
@@ -1243,5 +1543,3 @@
     </script>
 </body>
 </html>
-
-```
