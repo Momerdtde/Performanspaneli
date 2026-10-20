@@ -1,34 +1,4 @@
-e-Okul Puan Çizelgesi PDF dosyasını yüklediğiniz anda **Sınıf/Şube adını** (ör. `AL 9. Sınıf / F Şubesi` -> **9-F**), **Öğretmen Adını**, **Okul Adını**, **Branşı** ve tüm öğrencilerin **Okul Numarası + Ad Soyad** bilgilerini otomatik okuyup sınıfı tek tıkla kuran giriş bölümünü ve her sınıf veya sınıf düzeyi için **Konuşma Sınavı Kriterlerini ve Puanlarını manuel olarak oluşturup düzenleyebileceğiniz** dinamik kriter yöneticisini ekledim.
 
-Ayrıca önceki mesajda kodun yarım kalmasına veya Babel'in `appendChild / import` hatası vermesine neden olan tüm engelleri kaldıracak şekilde kodu optimize ettim.
-
-### Eklenen Yeni Özellikler:
-
-1. **Tek Tıkla e-Okul PDF'den Otomatik Sınıf + Öğrenci Kurulumu:**
-* **Sınıflar** sekmesinin en üstündeki **"e-Okul PDF Yükle (Sınıfı ve Öğrencileri Otomatik Oluştur)"** butonuna tıklayıp `9f.pdf` gibi bir çizelge seçtiğinizde:
-
-
-* PDF içindeki `Sınıfı / Şubesi: AL 9. Sınıf / F Şubesi` satırını okuyup otomatik olarak **9-F** sınıfını açar (sınıf zaten varsa mevcut sınıfa öğrencileri ekler/günceller).
-
-
-* Sıra numarası ile okul numarasının yer değiştirdiği satırları (`434 1 MUHAMMED ALSILES` veya `3 559 RAMAZAN AYAZ`) akıllıca ayrıştırır ve gerçek okul numaralarını (`434`, `559` vb.) kaydeder.
-
-
-
-
-
-
-2. **Dinamik Konuşma Sınavı Kriter Yöneticisi (Her Sınıfa Özel):**
-* **Konuşma Sınavı** sekmesinde artık **"Kriterleri Düzenle"** butonu yer alıyor.
-* Bu pencereden seçili sınıf için istediğiniz kadar kriter ekleyebilir, kriter cümlelerini ve **Maksimum Puanlarını** (toplamı 100 olacak şekilde) dilediğiniz gibi değiştirebilirsiniz.
-* Hazırladığınız kriter setini **"Tüm Sınıflara Kopyala"** diyerek aynı düzeydeki diğer şubelere tek tıkla aktarabilir veya hazır şablonlardan (**Standart 5 Kriter** / **9. Sınıf Yeni Müfredat 7 Kriter**) birini yükleyebilirsiniz.
-* Değerlendirme ekranında her kriter için **Tam Puan**, **Yarı Puan (Orta)**, **0 Puan** butonları yanı sıra ara puan verebilmeniz için **manuel puan kutucuğu** da bulunur.
-
-
-
-Aşağıdaki kod bloğunun tamamını kopyalayıp GitHub'daki `index.html` dosyanızla değiştirebilirsiniz (veya doğrudan önizleme penceresinden test edebilirsiniz):
-
-```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
