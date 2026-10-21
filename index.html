@@ -35,7 +35,30 @@
     <div id="root" class="w-full max-w-7xl"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, Fragment, useCallback, memo } = React;
+        const { useState, useEffect, Fragment, useCallback, memo, Component } = React;
+
+        // Ekranın boş kalmasını önleyen Hata Yakalayıcı Kalkan
+        class ErrorBoundary extends Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="bg-slate-800 border border-red-500 text-white p-6 rounded-xl max-w-xl mx-auto mt-10">
+                            <h2 className="text-xl font-bold text-red-400 mb-2">Bir Hata Oluştu</h2>
+                            <p className="text-sm text-slate-300 mb-4">{String(this.state.error)}</p>
+                            <button onClick={() => window.location.reload()} className="bg-blue-600 px-4 py-2 rounded font-bold text-sm">Sayfayı Yenile</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
 
         const firebaseConfig = {
             apiKey: "AIzaSyBn2f7sG_tb4AoCtx0AR1d3rw9OfhiW0Hc",
@@ -52,6 +75,12 @@
         }
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        const EditIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+        );
 
         const DEFAULT_SPEAKING_PRESET = [
             { id: 'ifadeler', label: 'Konuşmada uygun başlangıç ve bitiş ifadeleri kullanılmış ve olaylar/bilgiler sıraya konularak anlatılmıştır.', max: 20 },
@@ -127,13 +156,14 @@
         };
 
         const sortStudentsList = (students) => {
+            if (!Array.isArray(students)) return [];
             return [...students].sort((a, b) => {
-                const numA = parseInt(a.schoolNumber, 10);
-                const numB = parseInt(b.schoolNumber, 10);
+                const numA = parseInt(a?.schoolNumber, 10);
+                const numB = parseInt(b?.schoolNumber, 10);
                 if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
                 if (!isNaN(numA)) return -1;
                 if (!isNaN(numB)) return 1;
-                return (a.name || '').localeCompare(b.name || '', 'tr');
+                return String(a?.name || '').localeCompare(String(b?.name || ''), 'tr');
             });
         };
 
@@ -364,7 +394,7 @@
                     <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0">
                         <span className="text-slate-500 font-semibold w-6">{index + 1}.</span>
                         <button onClick={() => onDelete(student)} className="p-1 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded" title="Sil">✕</button>
-                        <button onClick={() => onOpenEdit(student)} className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded" title="Düzenle"><EditIcon /></button>
+                        <button onClick={() => onOpenEdit(student)} className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded" title="Bilgileri Düzenle"><EditIcon /></button>
                         {student.schoolNumber && <span className="text-amber-400 font-bold text-sm">[{student.schoolNumber}]</span>}
                         <span className="truncate">{student.name}</span>
                     </div>
@@ -429,14 +459,20 @@
             const [evaluatingSpeaking, setEvaluatingSpeaking] = useState(null);
             const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
 
-            const activeClass = classes.find(c => c.id === activeClassId);
+            const activeClass = classes.find(c => String(c.id) === String(activeClassId)) || (classes.length > 0 ? classes[0] : null);
+
+            useEffect(() => {
+                if (activeClass && String(activeClass.id) !== String(activeClassId)) {
+                    setActiveClassId(activeClass.id);
+                }
+            }, [activeClass, activeClassId]);
 
             const getClassSpeakingCriteria = useCallback((cls) => {
                 if (!cls) return DEFAULT_SPEAKING_PRESET;
                 if (cls.speakingCriteria && Array.isArray(cls.speakingCriteria) && cls.speakingCriteria.length > 0) {
                     return cls.speakingCriteria;
                 }
-                const isNinth = cls.name && cls.name.trim().startsWith('9');
+                const isNinth = cls.name && String(cls.name).trim().startsWith('9');
                 return isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
             }, []);
 
@@ -456,31 +492,34 @@
                             const calcSync = (scores) => {
                                 if (!scores) return currentSettings.baseScore;
                                 const sc = currentSettings.baseScore +
-                                    (scores.inClassPlus * currentSettings.inClassPlus) +
-                                    (scores.inClassMinus * currentSettings.inClassMinus) +
-                                    (scores.homeworkPlus * currentSettings.homeworkPlus) +
-                                    (scores.homeworkMinus * currentSettings.homeworkMinus);
+                                    ((Number(scores.inClassPlus) || 0) * currentSettings.inClassPlus) +
+                                    ((Number(scores.inClassMinus) || 0) * currentSettings.inClassMinus) +
+                                    ((Number(scores.homeworkPlus) || 0) * currentSettings.homeworkPlus) +
+                                    ((Number(scores.homeworkMinus) || 0) * currentSettings.homeworkMinus);
                                 return Math.max(0, Math.min(100, sc));
                             };
 
                             const migratedClasses = (data.classes || []).map(cls => {
-                                const isNinth = cls.name && cls.name.trim().startsWith('9');
+                                const isNinth = cls.name && String(cls.name).trim().startsWith('9');
                                 const defaultCrit = isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
                                 const classCriteria = (cls.speakingCriteria && cls.speakingCriteria.length > 0) ? cls.speakingCriteria : defaultCrit;
 
-                                const migratedStudents = (cls.students || []).map(student => {
+                                const migratedStudents = (cls.students || []).map(st => {
+                                    const student = { ...st };
                                     if (!student.scores || !student.scores.donem1) {
                                         const oldScores = (student.scores && student.scores.inClassPlus !== undefined) ? JSON.parse(JSON.stringify(student.scores)) : { ...defaultScores };
                                         student.scores = { donem1: oldScores, donem2: { ...defaultScores } };
                                     }
-                                    if (!student.assessments || !student.assessments.donem1?.hasOwnProperty('dersIciDurum')) {
+                                    if (!student.assessments || !student.assessments.donem1) {
                                         student.assessments = JSON.parse(JSON.stringify(newAssessmentStructure));
                                     }
                                     if (!student.speakingExams || !student.speakingExams.donem1) {
                                         student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
                                     }
-                                    if (student.schoolNumber === undefined) student.schoolNumber = '';
-
+                                    if (student.schoolNumber === undefined || student.schoolNumber === null) {
+                                        student.schoolNumber = '';
+                                    }
+                                    student.name = String(student.name || '').replace(/\s+/g, ' ').trim();
                                     student.assessments.donem1.dersIciDurum = calcSync(student.scores.donem1);
                                     student.assessments.donem2.dersIciDurum = calcSync(student.scores.donem2);
                                     return student;
@@ -495,9 +534,10 @@
                             });
 
                             setClasses(migratedClasses);
-                            if (migratedClasses.length > 0 && !activeClassId) {
-                                setActiveClassId(migratedClasses[0].id);
-                            }
+                            setActiveClassId(prevId => {
+                                if (prevId && migratedClasses.some(c => String(c.id) === String(prevId))) return prevId;
+                                return migratedClasses.length > 0 ? migratedClasses[0].id : null;
+                            });
                         }
                         setIsLoading(false);
                     }, err => {
@@ -528,6 +568,17 @@
             const handleSetActiveClassId = (id) => {
                 setSearchTerm('');
                 setActiveClassId(id);
+            };
+
+            const handleUpdateStudentInfo = (studentId, newNo, newName) => {
+                if (!activeClass) return;
+                const updatedClasses = classes.map(c => String(c.id) === String(activeClass.id) ? {
+                    ...c,
+                    students: sortStudentsList(c.students.map(s => s.id === studentId ? { ...s, schoolNumber: newNo, name: newName } : s))
+                } : c);
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                setEditingStudent(null);
             };
 
             const handleEokulPdfUpload = async (e, targetClassId = null) => {
@@ -641,7 +692,7 @@
 
                     if (selectedId) {
                         updatedClasses = updatedClasses.map(c => {
-                            if (c.id !== selectedId) return c;
+                            if (String(c.id) !== String(selectedId)) return c;
                             const existingNums = new Set(c.students.map(s => s.schoolNumber));
                             const filteredNew = newStudentObjects.filter(s => !existingNums.has(s.schoolNumber));
                             return { ...c, students: sortStudentsList([...c.students, ...filteredNew]) };
@@ -673,8 +724,8 @@
             };
 
             const handleSaveClassCriteria = (newCriteriaList) => {
-                if (!activeClassId) return;
-                const updatedClasses = classes.map(c => c.id === activeClassId ? { ...c, speakingCriteria: newCriteriaList } : c);
+                if (!activeClass) return;
+                const updatedClasses = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, speakingCriteria: newCriteriaList } : c);
                 setClasses(updatedClasses);
                 db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
                 setIsCriteriaModalOpen(false);
@@ -707,12 +758,12 @@
             };
 
             const handleSaveSpeakingExam = () => {
-                if (!evaluatingSpeaking) return;
+                if (!evaluatingSpeaking || !activeClass) return;
                 const { student, semester, examNumber, scores } = evaluatingSpeaking;
                 const donemKey = semester === 1 ? 'donem1' : 'donem2';
                 const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
                 const updatedClasses = classes.map(cls => {
-                    if (cls.id !== activeClassId) return cls;
+                    if (String(cls.id) !== String(activeClass.id)) return cls;
                     return {
                         ...cls,
                         students: cls.students.map(s => {
@@ -835,6 +886,34 @@
                 };
                 process(0);
             };
+
+            const handleSaveAssessments = useCallback(() => {
+                if (!activeClass || !tempClassData) return;
+                const updatedClasses = classes.map(cls => String(cls.id) === String(activeClass.id) ? tempClassData : cls);
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+            }, [classes, activeClass, tempClassData, user]);
+
+            const handleTempScoreChange = useCallback((studentId, donem, type, value) => {
+                const newScore = value === '' ? null : Math.max(0, Math.min(100, Number(value)));
+                setTempClassData(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        students: prev.students.map(s => s.id !== studentId ? s : {
+                            ...s,
+                            assessments: { ...s.assessments, [donem]: { ...s.assessments[donem], [type]: newScore } }
+                        })
+                    };
+                });
+            }, []);
+
+            const handleTempBookTitleChange = useCallback((donem, kitap, value) => {
+                setTempClassData(prev => !prev ? null : ({
+                    ...prev,
+                    bookTitles: { ...prev.bookTitles, [donem]: { ...prev.bookTitles[donem], [kitap]: value } }
+                }));
+            }, []);
 
             const handleGenerateSimplePdf = () => {
                 if (!activeClass) return;
@@ -1016,7 +1095,7 @@
             };
 
             const handleAddStudent = () => {
-                if (newStudentName.trim() === '' || !activeClassId) return;
+                if (newStudentName.trim() === '' || !activeClass) return;
                 const baseScoreVal = settings.baseScore;
                 const newStudent = {
                     id: Date.now(),
@@ -1030,13 +1109,13 @@
                     },
                     speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
                 };
-                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c));
+                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c));
                 setNewStudentNumber('');
                 setNewStudentName('');
             };
 
             const handleTextListSave = () => {
-                if (!activeClassId) return;
+                if (!activeClass) return;
                 const lines = listText.split('\n').filter(line => line.trim() !== '');
                 const baseScoreVal = settings.baseScore;
                 const newStudents = lines.map((line, index) => {
@@ -1067,30 +1146,41 @@
                         speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
                     };
                 });
-                setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c));
+                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c));
                 setListText('');
             };
 
-            const handleTempSettingsChange = (e) => {
-                const { name, value } = e.target;
-                const isNumeric = ['inClassPlus', 'inClassMinus', 'homeworkPlus', 'homeworkMinus', 'baseScore'].includes(name);
-                setTempSettings(prev => ({ ...prev, [name]: isNumeric ? Number(value) : value }));
+            const confirmDeleteClass = (classId) => {
+                const updatedClasses = classes.filter(c => String(c.id) !== String(classId));
+                setClasses(updatedClasses);
+                if (String(activeClassId) === String(classId)) {
+                    setActiveClassId(updatedClasses[0]?.id || null);
+                }
+                setClassToDelete(null);
             };
 
-            const confirmDeleteClass = (classId) => { const updatedClasses = classes.filter(c => c.id !== classId); setClasses(updatedClasses); if (activeClassId === classId) { setActiveClassId(updatedClasses[0]?.id || null); } setClassToDelete(null); };
-            const handleDeleteStudent = (studentId) => { if (!activeClassId) return; setClasses(prev => prev.map(c => c.id === activeClassId ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c )); setStudentToDelete(null); };
+            const handleDeleteStudent = (studentId) => {
+                if (!activeClass) return;
+                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c));
+                setStudentToDelete(null);
+            };
             
             const calculateGrade = useCallback((scores) => { 
                 if (!scores) return settings.baseScore; 
-                const score = settings.baseScore + (scores.inClassPlus * settings.inClassPlus) + (scores.inClassMinus * settings.inClassMinus) + (scores.homeworkPlus * settings.homeworkPlus) + (scores.homeworkMinus * settings.homeworkMinus); 
+                const score = settings.baseScore +
+                    ((Number(scores.inClassPlus) || 0) * settings.inClassPlus) +
+                    ((Number(scores.inClassMinus) || 0) * settings.inClassMinus) +
+                    ((Number(scores.homeworkPlus) || 0) * settings.homeworkPlus) +
+                    ((Number(scores.homeworkMinus) || 0) * settings.homeworkMinus); 
                 return Math.max(0, Math.min(100, score)); 
             }, [settings]);
             
             const handleManualScoreChange = useCallback((studentId, scoreType, value) => {
+                if (!activeClass) return;
                 const scoreToSet = value === '' ? 0 : Math.max(0, Number(value));
                 const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
                 setClasses(prevClasses => prevClasses.map(c => {
-                    if (c.id !== activeClassId) return c;
+                    if (String(c.id) !== String(activeClass.id)) return c;
                     return {
                         ...c,
                         students: c.students.map(s => {
@@ -1104,14 +1194,15 @@
                         })
                     };
                 }));
-            }, [activeClassId, activeSemester, calculateGrade]);
+            }, [activeClass, activeSemester, calculateGrade]);
 
             const updateStudentScore = useCallback((studentId, scoreType) => {
+                if (!activeClass) return;
                 setUndoMessage('');
-                setLastAction({ studentId, scoreType, classId: activeClassId, semester: activeSemester });
+                setLastAction({ studentId, scoreType, classId: activeClass.id, semester: activeSemester });
                 const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
                 setClasses(prevClasses => prevClasses.map(c => {
-                    if (c.id !== activeClassId) return c;
+                    if (String(c.id) !== String(activeClass.id)) return c;
                     return {
                         ...c,
                         students: c.students.map(s => {
@@ -1125,9 +1216,16 @@
                         })
                     };
                 }));
-            }, [activeClassId, activeSemester, calculateGrade]);
+            }, [activeClass, activeSemester, calculateGrade]);
 
-            const handleSaveNote = (studentId, newNote) => { setClasses(prev => prev.map(c => { if (c.id !== activeClassId) return c; return { ...c, students: c.students.map(s => s.id === studentId ? { ...s, notes: newNote } : s )}; })); setEditingNoteStudent(null); };
+            const handleSaveNote = (studentId, newNote) => {
+                if (!activeClass) return;
+                setClasses(prev => prev.map(c => String(c.id) !== String(activeClass.id) ? c : {
+                    ...c,
+                    students: c.students.map(s => s.id === studentId ? { ...s, notes: newNote } : s)
+                }));
+                setEditingNoteStudent(null);
+            };
             
             const handleUndoLastAction = () => { 
                 if (!lastAction) return; 
@@ -1135,7 +1233,7 @@
                 const donemKey = semester === 1 ? 'donem1' : 'donem2'; 
                 let studentName = ''; 
                 setClasses(prev => prev.map(c => { 
-                    if (c.id !== classId) return c; 
+                    if (String(c.id) !== String(classId)) return c; 
                     return { ...c, students: c.students.map(s => { 
                         const currentScores = s.scores[donemKey] || defaultScores;
                         if (s.id === studentId && currentScores[scoreType] > 0) { 
@@ -1178,7 +1276,7 @@
             const filteredStudents = (list) => {
                 if (!list) return [];
                 const q = searchTerm.toLocaleLowerCase('tr-TR');
-                return list.filter(s => s.name.toLocaleLowerCase('tr-TR').includes(q) || (s.schoolNumber && String(s.schoolNumber).includes(q)));
+                return list.filter(s => String(s.name || '').toLocaleLowerCase('tr-TR').includes(q) || (s.schoolNumber && String(s.schoolNumber).includes(q)));
             };
 
             if (isLoading) return <div className="text-center text-white text-xl mt-20">Veriler Yükleniyor...</div>;
@@ -1235,7 +1333,7 @@
                             <div className="fade-in">
                                 <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
                                     {classes.map(c => (
-                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
                                             {c.name} ({c.students.length})
                                         </button>
                                     ))}
@@ -1291,7 +1389,7 @@
                             <div className="fade-in">
                                 <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
                                     {classes.map(c => (
-                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
                                             {c.name} ({c.students.length})
                                         </button>
                                     ))}
@@ -1359,7 +1457,7 @@
                                     <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
                                         {classes.map(c => (
                                             <div key={c.id} className="relative">
-                                                <button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${activeClassId === c.id ? 'bg-blue-600 font-bold text-white shadow-md' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                                <button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white shadow-md' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
                                                     {c.name} ({c.students.length})
                                                 </button>
                                                 <button onClick={() => setClassToDelete(c)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600">✕</button>
@@ -1527,7 +1625,11 @@
             }, []);
 
             if (loading) return <div className="text-center text-white text-xl mt-20">Yükleniyor...</div>;
-            return user ? <PerformancePanel user={user} /> : <AuthScreen />;
+            return (
+                <ErrorBoundary>
+                    {user ? <PerformancePanel user={user} /> : <AuthScreen />}
+                </ErrorBoundary>
+            );
         }
 
         ReactDOM.render(<App />, document.getElementById('root'));
