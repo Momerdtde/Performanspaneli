@@ -1065,7 +1065,7 @@
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 const pages = Array.from(container.children);
                 const process = (idx) => {
-                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} -${semester}. Dönem Performans Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Performans Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
                     window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
                 };
                 process(0);
@@ -1096,7 +1096,7 @@
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 const pages = Array.from(container.children);
                 const process = (idx) => {
-                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} -${semester}. Dönem Kitap Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
+                    if (idx >= pages.length) { pdf.save(`${tempClassData.name} - ${semester}. Dönem Kitap Raporu.pdf`); document.body.removeChild(container); setIsGeneratingPdf(false); return; }
                     window.html2canvas(pages[idx], { scale: 2, useCORS: true }).then(canvas => { if (idx > 0) pdf.addPage(); pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); process(idx + 1); });
                 };
                 process(0);
@@ -1367,4 +1367,296 @@
                                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4 mb-5">
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 1 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>1. Dönem</button>
-                                                <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester ===
+                                                <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 2 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>2. Dönem</button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button onClick={() => setIsCriteriaModalOpen(true)} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-lg text-sm">⚙️ Kriterleri Düzenle ({currentCriteria.length})</button>
+                                                <button onClick={() => handleGenerateDynamicSpeakingSummaryReport(activeSemester)} disabled={isGeneratingPdf} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg text-sm">📥 Özet Rapor (PDF)</button>
+                                                <button onClick={() => handleGenerateDynamicSpeakingDetailedReport(activeSemester)} disabled={isGeneratingPdf} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">📥 Bireysel Detay Raporu (PDF)</button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            {activeClass.students.map((student, index) => {
+                                                const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
+                                                const s1 = student.speakingExams?.[donemKey]?.sinav1 || {};
+                                                const s2 = student.speakingExams?.[donemKey]?.sinav2 || {};
+                                                const total1 = currentCriteria.reduce((sum, c) => sum + (Number(s1[c.id]) || 0), 0);
+                                                const total2 = currentCriteria.reduce((sum, c) => sum + (Number(s2[c.id]) || 0), 0);
+                                                return (
+                                                    <div key={student.id} className="bg-slate-800/50 rounded-lg p-3.5 border border-slate-700/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                        <div className="font-medium text-white">
+                                                            <span className="text-slate-500 mr-2">{index + 1}.</span>
+                                                            {student.schoolNumber && <span className="text-amber-400 font-bold mr-2">[{student.schoolNumber}]</span>}
+                                                            <span>{student.name}</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-3">
+                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">1. Sınav: <b className="text-amber-400 text-base ml-1">{total1}</b></span>
+                                                                <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 1)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-3 rounded">Puanla</button>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">2. Sınav: <b className="text-amber-400 text-base ml-1">{total2}</b></span>
+                                                                <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 2)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-3 rounded">Puanla</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : <div className="text-center py-10 text-slate-400">Sınıf seçiniz.</div>}
+                            </div>
+                        )}
+
+                        {activeView === 'assessments' && (
+                            <div className="fade-in">
+                                <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
+                                    {classes.map(c => (
+                                        <button key={c.id} onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                            {c.name} ({c.students.length})
+                                        </button>
+                                    ))}
+                                </div>
+                                {tempClassData ? (
+                                    <div>
+                                        <div className="flex border-b border-slate-700 mb-5">
+                                            <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>1. Dönem</button>
+                                            <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>2. Dönem</button>
+                                        </div>
+                                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                                            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                                                <h3 className="text-lg font-bold text-blue-400">{activeSemester}. Dönem Performans & Kitap Sınavı Değerlendirmeleri</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button onClick={handleSaveAssessments} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Dönemi Kaydet</button>
+                                                    <button onClick={() => handleGenerateBookReport(activeSemester)} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Kitap Raporu (PDF)</button>
+                                                    <button onClick={handleGenerateSimplePdf} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Basit Rapor</button>
+                                                    <button onClick={handleGeneratePlusMinusReport} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Artı/Eksi Raporu</button>
+                                                    <button onClick={handleGenerateDetailedPdf} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Detaylı Rapor</button>
+                                                    <button onClick={() => handleGenerateSemesterReport(activeSemester)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Performans Raporu (PDF)</button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                                <div>
+                                                    <label className="block text-xs text-slate-400">1. Kitap Adı</label>
+                                                    <input type="text" value={tempClassData.bookTitles?.[activeSemester === 1 ? 'donem1' : 'donem2']?.kitap1 || ''} onChange={e => handleTempBookTitleChange(activeSemester === 1 ? 'donem1' : 'donem2', 'kitap1', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-400">2. Kitap Adı</label>
+                                                    <input type="text" value={tempClassData.bookTitles?.[activeSemester === 1 ? 'donem1' : 'donem2']?.kitap2 || ''} onChange={e => handleTempBookTitleChange(activeSemester === 1 ? 'donem1' : 'donem2', 'kitap2', e.target.value)} className={`w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {filteredStudents(tempClassData.students).map((st, idx) => (
+                                                    <StudentAssessmentCard key={st.id} student={st} index={idx} semester={activeSemester} onScoreChange={handleTempScoreChange} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        )}
+
+                        {activeView === 'classes' && (
+                            <div className="fade-in">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-700">
+                                    <div>
+                                        <h2 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-2">e-Okul PDF'den Otomatik Sınıf Kur</h2>
+                                        <label className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-lg cursor-pointer text-sm shadow">
+                                            <span>{isParsingPdf ? 'PDF Okunuyor...' : '📄 e-Okul Puan Çizelgesi PDF Yükle'}</span>
+                                            <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, null)} disabled={isParsingPdf} className="hidden" />
+                                        </label>
+                                        {pdfStatusMsg && <p className="text-green-400 text-xs mt-2 font-semibold">{pdfStatusMsg}</p>}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-sm font-bold text-blue-400 uppercase tracking-wider mb-2">Manuel Sınıf Ekle</h2>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="Sınıf Adı (örn: 9-F)" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm ${focusClasses}`} />
+                                            <button onClick={handleAddClass} className="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700 text-sm">Ekle</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {classes.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
+                                        {classes.map(c => (
+                                            <div key={c.id} className="relative">
+                                                <button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white shadow-md' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
+                                                    {c.name} ({c.students.length})
+                                                </button>
+                                                <button onClick={() => setClassToDelete(c)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600">✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {activeClass ? (
+                                    activeClass.students.length === 0 ? (
+                                        <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-6 space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-white mb-1">{activeClass.name} Sınıfına Öğrenci Aktar</h3>
+                                                <label className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 cursor-pointer text-sm">
+                                                    <span>{isParsingPdf ? 'Yükleniyor...' : '📄 PDF Dosyası Seç'}</span>
+                                                    <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, activeClass.id)} disabled={isParsingPdf} className="hidden" />
+                                                </label>
+                                            </div>
+                                            <div className="border-t border-slate-700 pt-5">
+                                                <h3 className="text-lg font-bold text-white mb-2">Metin Listesi Yapıştır</h3>
+                                                <textarea value={listText} onChange={e => setListText(e.target.value)} placeholder={"434 MUHAMMED ALSILES\n500 BAHA KEREM KUDİŞ..."} className={`w-full h-28 p-3 bg-slate-700 border border-slate-600 rounded-lg mb-3 text-white text-sm ${focusClasses}`} />
+                                                <button onClick={handleTextListSave} className="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 text-sm">Kaydet</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+                                                <div className="flex border-b border-slate-700">
+                                                    <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>1. Dönem</button>
+                                                    <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>2. Dönem</button>
+                                                </div>
+                                                <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Öğrenci ara..." className={`sm:w-72 p-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                            </div>
+
+                                            <div className="hidden md:grid grid-cols-12 gap-4 font-bold text-slate-400 text-xs p-2 border-b border-slate-700 mb-2">
+                                                <div className="col-span-4">Öğrenci (Okul No - Ad Soyad)</div>
+                                                <div className="col-span-3 text-center">Sınıf İçi (+/-)</div>
+                                                <div className="col-span-3 text-center">Ödev (+/-)</div>
+                                                <div className="col-span-1 text-center">Notlar</div>
+                                                <div className="col-span-1 text-center">Sözlü</div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {filteredStudents(activeClass.students).map(student => (
+                                                    <StudentScoreRow
+                                                        key={student.id}
+                                                        student={student}
+                                                        scores={student.scores[activeSemester === 1 ? 'donem1' : 'donem2'] || defaultScores}
+                                                        index={activeClass.students.findIndex(s => s.id === student.id)}
+                                                        onUpdateScore={updateStudentScore}
+                                                        onManualChange={handleManualScoreChange}
+                                                        onDelete={setStudentToDelete}
+                                                        onOpenNotes={setEditingNoteStudent}
+                                                        onOpenEdit={setEditingStudent}
+                                                        calculateGrade={calculateGrade}
+                                                    />
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-8 pt-5 border-t border-slate-700 flex flex-col sm:flex-row gap-2">
+                                                <input type="text" value={newStudentNumber} onChange={e => setNewStudentNumber(e.target.value)} placeholder="Okul No" className={`sm:w-36 p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                <input type="text" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} placeholder="Öğrenci Adı Soyadı" className={`flex-grow p-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
+                                                <button onClick={handleAddStudent} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Ekle</button>
+                                                <label className="flex items-center justify-center bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 cursor-pointer text-sm">
+                                                    <span>PDF Ekle</span>
+                                                    <input type="file" accept="application/pdf" onChange={e => handleEokulPdfUpload(e, activeClass.id)} disabled={isParsingPdf} className="hidden" />
+                                                </label>
+                                            </div>
+                                            <div className="flex flex-wrap justify-end items-center mt-6 gap-3">
+                                                {undoMessage && <span className="text-green-400 text-xs font-semibold">{undoMessage}</span>}
+                                                <button onClick={handleUndoLastAction} disabled={!lastAction} className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-sm disabled:opacity-50">Geri Al</button>
+                                                <button onClick={handleGenerateSimplePdf} disabled={isGeneratingPdf} className="py-2 px-4 bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-lg text-sm">Basit Rapor</button>
+                                                <button onClick={handleGeneratePlusMinusReport} disabled={isGeneratingPdf} className="py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-sm">Artı/Eksi Raporu</button>
+                                                <button onClick={handleGenerateDetailedPdf} disabled={isGeneratingPdf} className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm">Detaylı Rapor</button>
+                                            </div>
+                                        </div>
+                                    )
+                                ) : <div className="text-center py-12 text-slate-400">Sınıf seçiniz veya oluşturunuz.</div>}
+                            </div>
+                        )}
+                    </div>
+
+                    {isCriteriaModalOpen && activeClass && (
+                        <CriteriaManagerModal
+                            activeClass={activeClass}
+                            onSaveCriteria={handleSaveClassCriteria}
+                            onCopyCriteriaToAll={handleCopyCriteriaToAllClasses}
+                            onClose={() => setIsCriteriaModalOpen(false)}
+                        />
+                    )}
+
+                    {evaluatingSpeaking && (
+                        <DynamicSpeakingExamModal
+                            student={evaluatingSpeaking.student}
+                            criteria={evaluatingSpeaking.criteria}
+                            scores={evaluatingSpeaking.scores}
+                            examNumber={evaluatingSpeaking.examNumber}
+                            className={activeClass?.name}
+                            onScoreChange={handleSpeakingScoreChange}
+                            onSave={handleSaveSpeakingExam}
+                            onClose={() => setEvaluatingSpeaking(null)}
+                        />
+                    )}
+
+                    {editingStudent && (
+                        <EditStudentModal
+                            student={editingStudent}
+                            onSave={handleUpdateStudentInfo}
+                            onClose={() => setEditingStudent(null)}
+                        />
+                    )}
+
+                    {classToDelete && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
+                                <h3 className="text-lg font-bold text-white mb-2">Sınıfı Sil</h3>
+                                <p className="text-slate-300 text-sm mb-5">"{classToDelete.name}" sınıfını silmek istediğinize emin misiniz?</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setClassToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
+                                    <button onClick={() => confirmDeleteClass(classToDelete.id)} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {studentToDelete && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
+                                <h3 className="text-lg font-bold text-white mb-2">Öğrenciyi Sil</h3>
+                                <p className="text-slate-300 text-sm mb-5">"{studentToDelete.name}" isimli öğrenciyi silmek istediğinize emin misiniz?</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setStudentToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
+                                    <button onClick={() => handleDeleteStudent(studentToDelete.id)} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {editingNoteStudent && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-lg w-full">
+                                <h3 className="text-lg font-bold text-white mb-3">Öğrenci Notu: <span className="text-blue-400">{editingNoteStudent.name}</span></h3>
+                                <textarea defaultValue={editingNoteStudent.notes} id="student-note-textarea" className="w-full h-40 p-3 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm mb-4" placeholder="Notunuz..." />
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setEditingNoteStudent(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Kapat</button>
+                                    <button onClick={() => { const val = document.getElementById('student-note-textarea').value; handleSaveNote(editingNoteStudent.id, val); }} className="py-2 px-5 bg-blue-600 text-white rounded-lg font-bold text-sm">Kaydet</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </Fragment>
+            );
+        }
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(u => {
+                    setUser(u);
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) return <div className="text-center text-white text-xl mt-20">Yükleniyor...</div>;
+            return (
+                <ErrorBoundary>
+                    {user ? <PerformancePanel user={user} /> : <AuthScreen />}
+                </ErrorBoundary>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
