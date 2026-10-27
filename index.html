@@ -35,7 +35,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .cool-title { font-family: 'Exo 2', sans-serif; background: -webkit-linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .fade-in { animation: fadeIn 0.25s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
         input[type='number']::-webkit-inner-spin-button, input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type='number'] { -moz-appearance: textfield; }
@@ -86,6 +86,24 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
+        // Genel Silme / Sıfırlama Onay Modalı
+        const ConfirmDialogModal = ({ title, message, confirmText = 'Evet, Sil', onConfirm, onCancel }) => (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4 fade-in">
+                <div className="bg-slate-800 rounded-xl p-6 border border-red-500/50 max-w-md w-full shadow-2xl">
+                    <h3 className="text-lg font-bold text-red-400 mb-2">{title || 'Silme Onayı'}</h3>
+                    <p className="text-slate-200 text-sm mb-6 leading-relaxed">{message}</p>
+                    <div className="flex justify-end gap-3">
+                        <button type="button" onClick={onCancel} className="py-2 px-4 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-semibold">
+                            Hayır, Vazgeç
+                        </button>
+                        <button type="button" onClick={onConfirm} className="py-2 px-5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm shadow">
+                            {confirmText}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
         // Varsayılan 1. ve 2. Performans Notu Kalemleri ve Yüzdelikleri
         const DEFAULT_PERF_CONFIG = {
             perf1Title: '1. Performans Notu',
@@ -101,7 +119,6 @@
             ]
         };
 
-        // Dinamik Ağırlıklı Performans Ortalaması Hesaplayıcı
         const calculateDynamicPerfScore = (assessment, items) => {
             if (!assessment || !Array.isArray(items) || items.length === 0) return null;
             let weightedSum = 0;
@@ -296,12 +313,11 @@
             );
         }
 
-        // Performans Kalemlerini, Başlıkları ve Yüzdelikleri Düzenleme Bileşeni (Hem Ayarlar hem Modal için)
+        // Performans Kalemlerini, Başlıkları ve Yüzdelikleri Düzenleme Bileşeni (Silme Onaylı)
         const PerfConfigEditor = ({ perfConfig, onChange, onResetDefault }) => {
+            const [confirmAction, setConfirmAction] = useState(null);
             const p1Items = perfConfig?.perf1Items || DEFAULT_PERF_CONFIG.perf1Items;
             const p2Items = perfConfig?.perf2Items || DEFAULT_PERF_CONFIG.perf2Items;
-            const p1Title = perfConfig?.perf1Title || DEFAULT_PERF_CONFIG.perf1Title;
-            const p2Title = perfConfig?.perf2Title || DEFAULT_PERF_CONFIG.perf2Title;
 
             const sumP1 = p1Items.reduce((acc, it) => acc + (Number(it.weight) || 0), 0);
             const sumP2 = p2Items.reduce((acc, it) => acc + (Number(it.weight) || 0), 0);
@@ -323,12 +339,32 @@
                 onChange({ ...perfConfig, [groupKey]: list });
             };
 
-            const removeItem = (groupKey, idx) => {
-                const list = (perfConfig[groupKey] || []).filter((_, i) => i !== idx);
-                onChange({ ...perfConfig, [groupKey]: list });
+            const requestRemoveItem = (groupKey, idx, itemLabel) => {
+                setConfirmAction({
+                    title: 'Performans Kalemini Sil',
+                    message: `"${itemLabel}" kalemini silmek istediğinize emin misiniz?`,
+                    confirmText: 'Evet, Kalemi Sil',
+                    onConfirm: () => {
+                        const list = (perfConfig[groupKey] || []).filter((_, i) => i !== idx);
+                        onChange({ ...perfConfig, [groupKey]: list });
+                        setConfirmAction(null);
+                    }
+                });
             };
 
-            const renderGroup = (titleKey, groupKey, items, totalWeight, badgeColor) => (
+            const requestResetDefault = () => {
+                setConfirmAction({
+                    title: 'Varsayılan Ayarlara Dön',
+                    message: 'Performans kalemlerini ve yüzdeliklerini varsayılan ayarlara sıfırlamak istediğinize emin misiniz?',
+                    confirmText: 'Evet, Sıfırla',
+                    onConfirm: () => {
+                        onResetDefault();
+                        setConfirmAction(null);
+                    }
+                });
+            };
+
+            const renderGroup = (titleKey, groupKey, items, totalWeight) => (
                 <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
                     <div>
                         <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-3 gap-2">
@@ -381,7 +417,7 @@
                                         </label>
                                         <button
                                             type="button"
-                                            onClick={() => removeItem(groupKey, idx)}
+                                            onClick={() => requestRemoveItem(groupKey, idx, item.label)}
                                             className="p-1.5 text-red-400 hover:bg-red-500/20 rounded text-xs font-bold"
                                             title="Kalemi Sil"
                                         >
@@ -411,7 +447,7 @@
                         </p>
                         <button
                             type="button"
-                            onClick={onResetDefault}
+                            onClick={requestResetDefault}
                             className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 py-1 px-3 rounded font-medium"
                         >
                             Varsayılan Ayarlara Dön
@@ -421,6 +457,15 @@
                         {renderGroup('perf1Title', 'perf1Items', p1Items, sumP1)}
                         {renderGroup('perf2Title', 'perf2Items', p2Items, sumP2)}
                     </div>
+                    {confirmAction && (
+                        <ConfirmDialogModal
+                            title={confirmAction.title}
+                            message={confirmAction.message}
+                            confirmText={confirmAction.confirmText}
+                            onConfirm={confirmAction.onConfirm}
+                            onCancel={() => setConfirmAction(null)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -452,13 +497,39 @@
             );
         };
 
+        // Konuşma Sınavı Kriterleri Düzenleme Modalı (Silme Onaylı)
         const CriteriaManagerModal = ({ activeClass, onSaveCriteria, onCopyCriteriaToAll, onClose }) => {
             const initialCriteria = (activeClass.speakingCriteria && activeClass.speakingCriteria.length > 0)
                 ? activeClass.speakingCriteria
                 : (activeClass.name && activeClass.name.trim().startsWith('9') ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET);
 
             const [items, setItems] = useState(JSON.parse(JSON.stringify(initialCriteria)));
+            const [confirmAction, setConfirmAction] = useState(null);
             const totalMax = items.reduce((sum, item) => sum + (Number(item.max) || 0), 0);
+
+            const requestDeleteCriterion = (idx, labelText) => {
+                setConfirmAction({
+                    title: 'Kriteri Sil',
+                    message: `"K.${idx + 1}: ${labelText}" kriterini silmek istediğinize emin misiniz?`,
+                    confirmText: 'Evet, Kriteri Sil',
+                    onConfirm: () => {
+                        setItems(prev => prev.filter((_, i) => i !== idx));
+                        setConfirmAction(null);
+                    }
+                });
+            };
+
+            const requestLoadPreset = (preset, presetName) => {
+                setConfirmAction({
+                    title: 'Şablon Yükleme Onayı',
+                    message: `Mevcut kriterlerin yerine "${presetName}" şablonunu yüklemek istediğinize emin misiniz?`,
+                    confirmText: 'Evet, Yükle',
+                    onConfirm: () => {
+                        setItems(JSON.parse(JSON.stringify(preset)));
+                        setConfirmAction(null);
+                    }
+                });
+            };
 
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
@@ -473,8 +544,8 @@
                         <div className="px-5 py-3 bg-slate-900/60 border-b border-slate-700 flex flex-wrap gap-2 items-center justify-between">
                             <div className="flex flex-wrap gap-2 items-center">
                                 <span className="text-xs text-slate-400">Şablon Yükle:</span>
-                                <button onClick={() => setItems(JSON.parse(JSON.stringify(DEFAULT_SPEAKING_PRESET)))} className="text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-1.5 px-3 rounded-md font-medium">Standart (5 Kriter)</button>
-                                <button onClick={() => setItems(JSON.parse(JSON.stringify(NINTH_GRADE_SPEAKING_PRESET)))} className="text-xs bg-slate-700 hover:bg-slate-600 text-purple-300 py-1.5 px-3 rounded-md font-medium">9. Sınıf (7 Kriter)</button>
+                                <button type="button" onClick={() => requestLoadPreset(DEFAULT_SPEAKING_PRESET, 'Standart 5 Kriter')} className="text-xs bg-slate-700 hover:bg-slate-600 text-sky-300 py-1.5 px-3 rounded-md font-medium">Standart (5 Kriter)</button>
+                                <button type="button" onClick={() => requestLoadPreset(NINTH_GRADE_SPEAKING_PRESET, '9. Sınıf 7 Kriter')} className="text-xs bg-slate-700 hover:bg-slate-600 text-purple-300 py-1.5 px-3 rounded-md font-medium">9. Sınıf (7 Kriter)</button>
                             </div>
                             <div className={`text-sm font-bold px-3 py-1 rounded-md ${totalMax === 100 ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
                                 Toplam Puan: {totalMax} / 100
@@ -489,19 +560,28 @@
                                         <label className="text-[10px] text-slate-400 mb-0.5">Maks</label>
                                         <input type="number" step="5" value={item.max} onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, max: Number(e.target.value) || 0 } : it))} className={`w-16 p-1.5 text-center bg-slate-700 border border-slate-600 rounded-md font-bold text-amber-400 ${focusClasses}`} />
                                     </div>
-                                    <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="mt-4 p-2 text-red-400 hover:bg-red-500/20 rounded-md text-xs font-bold">Sil</button>
+                                    <button type="button" onClick={() => requestDeleteCriterion(idx, item.label)} className="mt-4 p-2 text-red-400 hover:bg-red-500/20 rounded-md text-xs font-bold">Sil</button>
                                 </div>
                             ))}
-                            <button onClick={() => setItems(prev => [...prev, { id: 'krit_' + Date.now(), label: 'Yeni ölçüt...', max: 20 }])} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-blue-400 rounded-lg font-semibold text-sm">+ Yeni Kriter Ekle</button>
+                            <button type="button" onClick={() => setItems(prev => [...prev, { id: 'krit_' + Date.now(), label: 'Yeni ölçüt...', max: 20 }])} className="w-full py-2.5 border-2 border-dashed border-slate-600 hover:border-blue-500 text-blue-400 rounded-lg font-semibold text-sm">+ Yeni Kriter Ekle</button>
                         </div>
                         <div className="p-5 border-t border-slate-700 bg-slate-800/90 flex flex-wrap justify-between items-center gap-3">
-                            <button onClick={() => onCopyCriteriaToAll(items)} className="py-2 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold">Tüm Sınıflara Uygula</button>
+                            <button type="button" onClick={() => onCopyCriteriaToAll(items)} className="py-2 px-4 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold">Tüm Sınıflara Uygula</button>
                             <div className="flex gap-3">
-                                <button onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
-                                <button onClick={() => onSaveCriteria(items)} className="py-2 px-5 bg-green-600 text-white rounded-lg font-bold text-sm">Kaydet</button>
+                                <button type="button" onClick={onClose} className="py-2 px-5 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
+                                <button type="button" onClick={() => onSaveCriteria(items)} className="py-2 px-5 bg-green-600 text-white rounded-lg font-bold text-sm">Kaydet</button>
                             </div>
                         </div>
                     </div>
+                    {confirmAction && (
+                        <ConfirmDialogModal
+                            title={confirmAction.title}
+                            message={confirmAction.message}
+                            confirmText={confirmAction.confirmText}
+                            onConfirm={confirmAction.onConfirm}
+                            onCancel={() => setConfirmAction(null)}
+                        />
+                    )}
                 </div>
             );
         };
@@ -638,7 +718,7 @@
                 <div className="bg-slate-800/50 rounded-lg p-3.5 flex flex-col md:grid md:grid-cols-12 md:gap-4 md:items-center hover:bg-slate-700/40 border border-slate-700/40">
                     <div className="col-span-4 font-medium text-slate-100 flex items-center gap-2 mb-3 md:mb-0">
                         <span className="text-slate-500 font-semibold w-6">{index + 1}.</span>
-                        <button onClick={() => onDelete(student)} className="p-1 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded" title="Sil">✕</button>
+                        <button onClick={() => onDelete(student)} className="p-1 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded" title="Öğrenciyi Sil">✕</button>
                         <button onClick={() => onOpenEdit(student)} className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded" title="Bilgileri Düzenle"><EditIcon /></button>
                         {student.schoolNumber && <span className="text-amber-400 font-bold text-sm">[{student.schoolNumber}]</span>}
                         <span className="truncate">{student.name}</span>
@@ -718,7 +798,6 @@
             const activeClass = classes.find(c => String(c.id) === String(activeClassId)) || (classes.length > 0 ? classes[0] : null);
             const activePerfConfig = settings.perfConfig || DEFAULT_PERF_CONFIG;
 
-            // Sözlü notu değiştiğinde "Sözlüden Oto." işaretli tüm performans kalemlerini senkronize eder
             const syncAutoItemsInAssessment = (assessmentDonem, gradeVal, pConfig) => {
                 const updated = { ...(assessmentDonem || {}) };
                 const cfg = pConfig || DEFAULT_PERF_CONFIG;
@@ -1323,7 +1402,6 @@
                 process(0);
             };
 
-            // Dinamik Performans Raporu (Ayarlardaki kalemlere ve yüzdelere göre tablo üretir)
             const handleGenerateSemesterReport = (semester) => {
                 if (!tempClassData) return;
                 setIsGeneratingPdf(true);
@@ -1482,6 +1560,7 @@
             const confirmDeleteClass = (classId) => {
                 const updatedClasses = classes.filter(c => String(c.id) !== String(classId));
                 setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
                 if (String(activeClassId) === String(classId)) {
                     setActiveClassId(updatedClasses[0]?.id || null);
                 }
@@ -1490,7 +1569,9 @@
 
             const handleDeleteStudent = (studentId) => {
                 if (!activeClass) return;
-                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c));
+                const updatedClasses = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c);
+                setClasses(updatedClasses);
+                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
                 setStudentToDelete(null);
             };
             
@@ -1822,7 +1903,7 @@
                                                 <button onClick={() => handleSetActiveClassId(c.id)} className={`py-2 px-4 rounded-lg text-sm ${String(activeClass?.id) === String(c.id) ? 'bg-blue-600 font-bold text-white shadow-md' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>
                                                     {c.name} ({c.students.length})
                                                 </button>
-                                                <button onClick={() => setClassToDelete(c)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600">✕</button>
+                                                <button onClick={() => setClassToDelete(c)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hover:bg-red-600" title="Sınıfı Sil">✕</button>
                                             </div>
                                         ))}
                                     </div>
@@ -1964,29 +2045,23 @@
                     )}
 
                     {classToDelete && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
-                                <h3 className="text-lg font-bold text-white mb-2">Sınıfı Sil</h3>
-                                <p className="text-slate-300 text-sm mb-5">"{classToDelete.name}" sınıfını silmek istediğinize emin misiniz?</p>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={() => setClassToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
-                                    <button onClick={() => confirmDeleteClass(classToDelete.id)} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
-                                </div>
-                            </div>
-                        </div>
+                        <ConfirmDialogModal
+                            title="Sınıfı Silme Onayı"
+                            message={`"${classToDelete.name}" sınıfını ve içerisindeki tüm öğrenci verilerini kalıcı olarak silmek istediğinize emin misiniz?`}
+                            confirmText="Evet, Sınıfı Sil"
+                            onConfirm={() => confirmDeleteClass(classToDelete.id)}
+                            onCancel={() => setClassToDelete(null)}
+                        />
                     )}
 
                     {studentToDelete && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full">
-                                <h3 className="text-lg font-bold text-white mb-2">Öğrenciyi Sil</h3>
-                                <p className="text-slate-300 text-sm mb-5">"{studentToDelete.name}" isimli öğrenciyi silmek istediğinize emin misiniz?</p>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={() => setStudentToDelete(null)} className="py-2 px-4 bg-slate-600 text-white rounded-lg text-sm">Vazgeç</button>
-                                    <button onClick={() => handleDeleteStudent(studentToDelete.id)} className="py-2 px-4 bg-red-600 text-white rounded-lg font-bold text-sm">Sil</button>
-                                </div>
-                            </div>
-                        </div>
+                        <ConfirmDialogModal
+                            title="Öğrenciyi Silme Onayı"
+                            message={`"${studentToDelete.schoolNumber ? '[' + studentToDelete.schoolNumber + '] ' : ''}${studentToDelete.name}" isimli öğrenciyi ve tüm notlarını silmek istediğinize emin misiniz?`}
+                            confirmText="Evet, Öğrenciyi Sil"
+                            onConfirm={() => handleDeleteStudent(studentToDelete.id)}
+                            onCancel={() => setStudentToDelete(null)}
+                        />
                     )}
 
                     {editingNoteStudent && (
