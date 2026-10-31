@@ -30,6 +30,7 @@
     </script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://unpkg.com/firebase@9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@700&family=Inter:wght@400;500;600;700&display=swap');
@@ -46,7 +47,7 @@
     <div id="root" class="w-full max-w-7xl"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, Fragment, useCallback, memo, Component } = React;
+        const { useState, useEffect, Fragment, useCallback, memo, Component, useRef } = React;
 
         class ErrorBoundary extends Component {
             constructor(props) {
@@ -70,7 +71,10 @@
             }
         }
 
-        const firebaseConfig = {
+        // ============================================================================
+        // AKILLI BULUT YÖNETİMİ
+        // ============================================================================
+        const OWNER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyBn2f7sG_tb4AoCtx0AR1d3rw9OfhiW0Hc",
             authDomain: "performanspaneli.firebaseapp.com",
             projectId: "performanspaneli",
@@ -80,11 +84,151 @@
             measurementId: "G-4P30W8GEYJ"
         };
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        const isOwnerDomain = () => {
+            const host = window.location.hostname.toLowerCase();
+            return host.includes('momerdtde.github.io');
+        };
+
+        const parseFirebaseConfigText = (rawText) => {
+            if (!rawText) return null;
+            try {
+                if (rawText.trim().startsWith('PP_CLOUD_')) {
+                    const decoded = atob(rawText.trim().replace('PP_CLOUD_', ''));
+                    return JSON.parse(decoded);
+                }
+                const extractField = (key) => {
+                    const regex = new RegExp(key + '\\s*:\\s*["\']([^"\']+)["\']');
+                    const m = rawText.match(regex);
+                    return m ? m[1].trim() : '';
+                };
+                const apiKey = extractField('apiKey');
+                const authDomain = extractField('authDomain');
+                const projectId = extractField('projectId');
+                const storageBucket = extractField('storageBucket');
+                const messagingSenderId = extractField('messagingSenderId');
+                const appId = extractField('appId');
+                if (apiKey && projectId) {
+                    return { apiKey, authDomain: authDomain || `${projectId}.firebaseapp.com`, projectId, storageBucket, messagingSenderId, appId };
+                }
+                const parsed = JSON.parse(rawText);
+                if (parsed.apiKey && parsed.projectId) return parsed;
+            } catch (e) {
+                return null;
+            }
+            return null;
+        };
+
+        const encodePortableCloudKey = (cfg) => {
+            try {
+                return 'PP_CLOUD_' + btoa(JSON.stringify(cfg));
+            } catch (e) {
+                return '';
+            }
+        };
+
+        const getActiveCloudConfig = () => {
+            const customSaved = localStorage.getItem('pp_custom_firebase_config');
+            if (customSaved) {
+                try {
+                    const parsed = JSON.parse(customSaved);
+                    if (parsed && parsed.apiKey && parsed.projectId) return { mode: 'custom_cloud', config: parsed };
+                } catch (e) {}
+            }
+            const modePref = localStorage.getItem('pp_storage_mode');
+            if (modePref === 'local') {
+                return { mode: 'local', config: null };
+            }
+            if (isOwnerDomain() && modePref !== 'setup_new') {
+                return { mode: 'owner_cloud', config: OWNER_FIREBASE_CONFIG };
+            }
+            return { mode: 'needs_setup', config: null };
+        };
+
+        const activeCloudInfo = getActiveCloudConfig();
+        let auth = null;
+        let db = null;
+
+        if (activeCloudInfo.config) {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(activeCloudInfo.config);
+                }
+                auth = firebase.auth();
+                db = firebase.firestore();
+            } catch (err) {
+                console.error("Firebase başlatma hatası:", err);
+            }
         }
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+
+        // Konuşma Sınavı Hedef Puanını Kriterlere Otomatik Dağıtma Fonksiyonu
+        // (Öncelikle 0, 5, 10, 15, 20 gibi 5'in katlarına dengeli dağıtır; ara küsurat varsa tamamlar)
+        const distributeSpeakingScoreToCriteria = (targetTotalScore, criteriaList) => {
+            if (!Array.isArray(criteriaList) || criteriaList.length === 0) return {};
+            const maxPossible = criteriaList.reduce((sum, c) => sum + (Number(c.max) || 0), 0);
+            if (maxPossible === 0) return {};
+
+            const target = Math.max(0, Math.min(maxPossible, Math.round(Number(targetTotalScore) || 0)));
+            const ratio = target / maxPossible;
+
+            // İlk aşama: Her kriterin oranına göre en yakın 5'in katına yuvarla
+            let currentSum = 0;
+            const items = criteriaList.map((c, idx) => {
+                const max = Number(c.max) || 0;
+                const exact = ratio * max;
+                let val = Math.round(exact / 5) * 5;
+                val = Math.max(0, Math.min(max, val));
+                currentSum += val;
+                return { id: c.id, max, exact, val, idx };
+            });
+
+            let diff = target - currentSum;
+
+            // İkinci aşama: 5'er 5'er farkı kapat
+            let guard = 0;
+            while (Math.abs(diff) >= 5 && 100 > guard) {
+                guard++;
+                if (diff > 0) {
+                    // En çok hak eden (exact - val farkı en büyük olan) ve max'a ulaşmamış kritere +5 ekle
+                    const candidates = items.filter(it => it.max >= it.val + 5);
+                    if (candidates.length === 0) break;
+                    candidates.sort((a, b) => (b.exact - b.val) - (a.exact - a.val));
+                    candidates[0].val += 5;
+                    diff -= 5;
+                } else {
+                    // En az hak eden (val - exact farkı en büyük olan) ve 5'ten büyük olan kriterden -5 çıkar
+                    const candidates = items.filter(it => it.val >= 5);
+                    if (candidates.length === 0) break;
+                    candidates.sort((a, b) => (b.val - b.exact) - (a.val - a.exact));
+                    candidates[0].val -= 5;
+                    diff += 5;
+                }
+            }
+
+            // Üçüncü aşama: Kullanıcı 83 gibi 5'in katı olmayan bir sayı girdiyse kalan 1-4 puanlık farkı tamamla
+            guard = 0;
+            while (diff !== 0 && 100 > guard) {
+                guard++;
+                if (diff > 0) {
+                    const candidates = items.filter(it => it.max > it.val);
+                    if (candidates.length === 0) break;
+                    candidates.sort((a, b) => (b.exact - b.val) - (a.exact - a.val));
+                    const add = Math.min(diff, candidates[0].max - candidates[0].val);
+                    candidates[0].val += add;
+                    diff -= add;
+                } else {
+                    const candidates = items.filter(it => it.val > 0);
+                    if (candidates.length === 0) break;
+                    candidates.sort((a, b) => (b.val - b.exact) - (a.val - a.exact));
+                    const sub = Math.min(Math.abs(diff), candidates[0].val);
+                    candidates[0].val -= sub;
+                    diff += sub;
+                }
+            }
+
+            const result = {};
+            items.forEach(it => { result[it.id] = it.val; });
+            return result;
+        };
 
         // Genel Silme / Sıfırlama Onay Modalı
         const ConfirmDialogModal = ({ title, message, confirmText = 'Evet, Sil', onConfirm, onCancel }) => (
@@ -104,7 +248,107 @@
             </div>
         );
 
-        // Varsayılan 1. ve 2. Performans Notu Kalemleri ve Yüzdelikleri
+        // Kendi Bulutunu Bağlama Sihirbazı
+        const CloudSetupScreen = ({ onBackToOwner }) => {
+            const [configInput, setConfigInput] = useState('');
+            const [error, setError] = useState('');
+            const [showGuide, setShowGuide] = useState(false);
+
+            const handleConnectCloud = (e) => {
+                e.preventDefault();
+                setError('');
+                const parsed = parseFirebaseConfigText(configInput);
+                if (!parsed) {
+                    setError('Geçerli bir Firebase yapılandırma kodu (firebaseConfig) veya Taşınabilir Bulut Anahtarı bulunamadı. Lütfen kodu kontrol edin.');
+                    return;
+                }
+                localStorage.setItem('pp_custom_firebase_config', JSON.stringify(parsed));
+                localStorage.setItem('pp_storage_mode', 'custom_cloud');
+                window.location.reload();
+            };
+
+            const handleStartLocalMode = () => {
+                localStorage.removeItem('pp_custom_firebase_config');
+                localStorage.setItem('pp_storage_mode', 'local');
+                window.location.reload();
+            };
+
+            return (
+                <div className="bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 text-white w-full max-w-2xl mx-auto mt-6 fade-in">
+                    <h1 className="cool-title text-3xl sm:text-4xl font-bold text-center mb-2">Performans Paneli Kurulumu</h1>
+                    <p className="text-slate-400 text-center text-sm mb-6">
+                        Verilerinizin tamamen size özel kalması ve tüm cihazlarınızdan (Telefon, Tablet, Bilgisayar) erişebilmeniz için kendi ücretsiz bulutunuzu bağlayın.
+                    </p>
+
+                    <div className="bg-slate-900/70 border border-blue-500/40 rounded-xl p-5 mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <h2 className="text-base font-bold text-blue-400">☁️ Seçenek 1: Kendi Ücretsiz Google Firebase Bulutunuzu Bağlayın (Önerilen)</h2>
+                            <button
+                                type="button"
+                                onClick={() => setShowGuide(!showGuide)}
+                                className="text-xs bg-blue-600/30 border border-blue-500 text-blue-300 px-3 py-1 rounded-md hover:bg-blue-600/50 font-semibold"
+                            >
+                                {showGuide ? 'Rehberi Gizle' : '❓ 2 Dakikada Nasıl Alınır?'}
+                            </button>
+                        </div>
+
+                        {showGuide && (
+                            <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 text-xs text-slate-300 space-y-2 mb-4 leading-relaxed">
+                                <p className="font-bold text-amber-400">Adım Adım Ücretsiz Kişisel Firebase Kurulumu:</p>
+                                <ol className="list-decimal list-inside space-y-1.5">
+                                    <li><a href="https://console.firebase.google.com/" target="_blank" className="text-sky-400 underline font-semibold">console.firebase.google.com</a> adresine Google hesabınızla girin ve <b>"Create a project" (Proje Oluştur)</b> butonuna basın.</li>
+                                    <li>Projenize bir isim verin (örn: <code>benim-sinif-panelim</code>) ve ilerleyin.</li>
+                                    <li>Sol menüden <b>Build &gt; Authentication</b> sekmesine tıklayın, <b>Get Started</b> deyin ve <b>Email/Password</b> seçeneğini <b>Enable (Etkin)</b> yapıp kaydedin.</li>
+                                    <li>Sol menüden <b>Build &gt; Firestore Database</b> sekmesine tıklayın, <b>Create Database</b> deyin ve <b>Start in production mode</b> diyerek oluşturun. Ardından üstteki <b>Rules (Kurallar)</b> sekmesine şu kuralı yapıştırıp <b>Publish</b> deyin:
+                                        <pre className="bg-slate-950 p-2 rounded mt-1 text-[11px] text-emerald-400 overflow-x-auto">{`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /userData/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n  }\n}`}</pre>
+                                    </li>
+                                    <li>Sol üstteki <b>Project Overview</b> yanındaki ⚙️ (Ayarlar) ikonundan <b>Project settings</b>'e girin. En altta <b>&lt;/&gt; (Web)</b> ikonuna tıklayıp uygulama adı yazın. Karşınıza çıkan <code>const firebaseConfig = &#123; ... &#125;</code> kodunu kopyalayıp aşağıdaki kutuya yapıştırın!</li>
+                                </ol>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleConnectCloud} className="space-y-3">
+                            <textarea
+                                rows="5"
+                                value={configInput}
+                                onChange={e => setConfigInput(e.target.value)}
+                                placeholder={`Firebase'den aldığınız firebaseConfig kodunu veya başka cihazınızdan kopyaladığınız "PP_CLOUD_..." anahtarını buraya yapıştırın:\n\nconst firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "..."\n};`}
+                                className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg text-xs font-mono text-emerald-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {error && <p className="text-red-400 text-xs">{error}</p>}
+                            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow">
+                                Kendi Bulutumu Bağla ve Başla
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-sm text-amber-400">💻 Seçenek 2: Bulutsuz (Cihaz Hafızası + Yedek Dosyası) Modu</h3>
+                            <p className="text-xs text-slate-400 mt-1">
+                                Firebase hesabı açmadan hemen kullanmaya başlayın. Verileriniz bu tarayıcıya kaydedilir; üst menüdeki <b>"Yedek İndir / Yükle"</b> butonuyla dosyalarınızı Google Drive üzerinden başka cihazlara taşıyabilirsiniz.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleStartLocalMode}
+                            className="shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-5 rounded-lg text-sm shadow"
+                        >
+                            Hemen Bulutsuz Başla
+                        </button>
+                    </div>
+
+                    {isOwnerDomain() && onBackToOwner && (
+                        <div className="mt-5 text-center">
+                            <button onClick={onBackToOwner} className="text-xs text-slate-400 hover:text-white underline">
+                                ← Yönetici (Muhammed Ömer DOĞUÇ) Giriş Ekranına Dön
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const DEFAULT_PERF_CONFIG = {
             perf1Title: '1. Performans Notu',
             perf1Items: [
@@ -138,7 +382,6 @@
             return Math.round(weightedSum / activeWeightTotal);
         };
 
-        // e-Okul PDF kaynaklı kopuk Türkçe harfleri otomatik birleştiren fonksiyon
         const fixSpacedTurkishName = (rawName) => {
             if (!rawName) return '';
             let s = String(rawName).replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR');
@@ -270,12 +513,14 @@
 
         const focusClasses = "focus:outline-none focus:ring-2 focus:ring-blue-500";
 
-        function AuthScreen() {
+        function AuthScreen({ onOpenCloudSetup }) {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [isLogin, setIsLogin] = useState(true);
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
+
+            const isCustomCloud = activeCloudInfo.mode === 'custom_cloud';
 
             const handleSubmit = (e) => {
                 e.preventDefault();
@@ -287,8 +532,11 @@
 
             return (
                 <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl p-8 text-white w-full max-w-md mx-auto mt-12 fade-in">
-                    <h1 className="cool-title text-4xl font-bold text-center mb-6">Performans Paneli</h1>
-                    <h2 className="text-xl font-bold text-center mb-6 text-slate-200">{isLogin ? 'Öğretmen Girişi' : 'Yeni Hesap Oluştur'}</h2>
+                    <h1 className="cool-title text-4xl font-bold text-center mb-2">Performans Paneli</h1>
+                    <p className="text-center text-xs text-emerald-400 mb-6">
+                        {isCustomCloud ? `☁️ Bağlı Bulut: ${activeCloudInfo.config.projectId}` : '☁️ Kişisel Bulut Oturumu'}
+                    </p>
+                    <h2 className="text-xl font-bold text-center mb-6 text-slate-200">{isLogin ? 'Öğretmen Girişi' : 'Kendi Bulutunda Hesap Oluştur'}</h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm text-slate-400">E-posta Adresi</label>
@@ -303,17 +551,31 @@
                             {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
                         </button>
                     </form>
-                    <p className="text-center text-slate-400 mt-5 text-sm">
-                        {isLogin ? "Hesabınız yok mu? " : "Zaten hesabınız var mı? "}
-                        <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-blue-400 hover:underline">
-                            {isLogin ? 'Kayıt Olun' : 'Giriş Yapın'}
+
+                    {isCustomCloud && (
+                        <p className="text-center text-slate-400 mt-4 text-sm">
+                            {isLogin ? "İlk kez mi kuruyorsunuz? " : "Zaten hesabınız var mı? "}
+                            <button onClick={() => setIsLogin(!isLogin)} className="font-semibold text-blue-400 hover:underline">
+                                {isLogin ? 'Yeni Hesap Oluşturun' : 'Giriş Yapın'}
+                            </button>
+                        </p>
+                    )}
+
+                    <div className="mt-6 pt-5 border-t border-slate-700 text-center">
+                        <p className="text-xs text-slate-400 mb-2">Başka bir öğretmen misiniz? Kendi bulutunuzla veya yerel modda kullanmak için:</p>
+                        <button
+                            type="button"
+                            onClick={onOpenCloudSetup}
+                            className="w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 text-amber-300 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                            ⚙️ Kendi Bulutunu Bağla / Bulutsuz Kullan
                         </button>
-                    </p>
+                    </div>
                 </div>
             );
         }
 
-        // Performans Kalemlerini, Başlıkları ve Yüzdelikleri Düzenleme Bileşeni (Silme Onaylı)
+        // Performans Kalemlerini, Başlıkları ve Yüzdelikleri Düzenleme Bileşeni
         const PerfConfigEditor = ({ perfConfig, onChange, onResetDefault }) => {
             const [confirmAction, setConfirmAction] = useState(null);
             const p1Items = perfConfig?.perf1Items || DEFAULT_PERF_CONFIG.perf1Items;
@@ -497,7 +759,6 @@
             );
         };
 
-        // Konuşma Sınavı Kriterleri Düzenleme Modalı (Silme Onaylı)
         const CriteriaManagerModal = ({ activeClass, onSaveCriteria, onCopyCriteriaToAll, onClose }) => {
             const initialCriteria = (activeClass.speakingCriteria && activeClass.speakingCriteria.length > 0)
                 ? activeClass.speakingCriteria
@@ -586,9 +847,15 @@
             );
         };
 
-        const DynamicSpeakingExamModal = memo(({ student, criteria, scores, onSave, onClose, onScoreChange, examNumber, className }) => {
+        // Konuşma Sınavı Değerlendirme Modalı (0-5-10-15-20 Butonlu + Otomatik Puan Dağıtıcılı)
+        const DynamicSpeakingExamModal = memo(({ student, criteria, scores, onSave, onClose, onScoreChange, onBatchScoresChange, examNumber, className }) => {
             const totalScore = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0);
             const maxPossible = criteria.reduce((sum, c) => sum + (Number(c.max) || 0), 0);
+            const [targetInput, setTargetInput] = useState(totalScore > 0 ? String(totalScore) : '');
+
+            useEffect(() => {
+                setTargetInput(totalScore > 0 ? String(totalScore) : '');
+            }, [totalScore]);
 
             const getFiveStepOptions = (maxVal) => {
                 const steps = [];
@@ -601,14 +868,39 @@
                 return steps;
             };
 
+            const handleDistributeInput = (valStr) => {
+                setTargetInput(valStr);
+                if (valStr === '' || isNaN(valStr)) return;
+                const distributed = distributeSpeakingScoreToCriteria(Number(valStr), criteria);
+                onBatchScoresChange(distributed);
+            };
+
             return (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
                     <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-3xl flex flex-col max-h-[90vh]">
-                        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
-                            <h3 className="text-xl font-bold text-white">
+                        <div className="p-5 border-b border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                            <h3 className="text-lg sm:text-xl font-bold text-white">
                                 {examNumber}. Konuşma Sınavı ({className}): <span className="text-blue-400">{student.schoolNumber ? `[${student.schoolNumber}] ` : ''}{student.name}</span>
                             </h3>
-                            <button onClick={() => criteria.forEach(c => onScoreChange(c.id, Number(c.max) || 0))} className="text-xs bg-emerald-600/30 border border-emerald-500 text-emerald-300 px-3 py-1.5 rounded-md hover:bg-emerald-600/50 font-semibold">Tümüne Tam Puan</button>
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                                <div className="flex items-center bg-slate-900/90 border border-amber-500/50 rounded-lg px-2.5 py-1 gap-2">
+                                    <span className="text-xs font-semibold text-amber-300">Hedef Puanı Dağıt:</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Örn: 85"
+                                        value={targetInput}
+                                        onChange={e => handleDistributeInput(e.target.value)}
+                                        className={`w-16 p-1 text-center bg-slate-700 border border-slate-600 rounded text-sm font-bold text-amber-400 ${focusClasses}`}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDistributeInput('100')}
+                                    className="text-xs bg-emerald-600/30 border border-emerald-500 text-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-600/50 font-semibold"
+                                >
+                                    Tam Puan (100)
+                                </button>
+                            </div>
                         </div>
                         <div className="p-5 overflow-y-auto space-y-3 flex-1">
                             {criteria.map((c, idx) => {
@@ -654,6 +946,35 @@
                 </div>
             );
         });
+
+        // Konuşma Sınavı Liste Satırındaki Hızlı Puan Giriş ve Otomatik Dağıtma Kutusu
+        const QuickSpeakingScoreInput = ({ totalScore, onQuickDistribute }) => {
+            const [val, setVal] = useState(totalScore > 0 ? String(totalScore) : '');
+            useEffect(() => {
+                setVal(totalScore > 0 ? String(totalScore) : '');
+            }, [totalScore]);
+
+            const commitChange = () => {
+                if (val === '') return;
+                const num = Number(val);
+                if (!isNaN(num) && num !== totalScore) {
+                    onQuickDistribute(num);
+                }
+            };
+
+            return (
+                <input
+                    type="number"
+                    placeholder="-"
+                    title="Notu yazıp Enter'a basarsanız kriterlere otomatik dağıtılır"
+                    value={val}
+                    onChange={e => setVal(e.target.value)}
+                    onBlur={commitChange}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.target.blur(); } }}
+                    className={`w-14 p-1 text-center bg-slate-800 border border-amber-500/40 rounded font-bold text-amber-400 text-sm ${focusClasses}`}
+                />
+            );
+        };
 
         const StudentAssessmentCard = memo(({ student, index, semester, onScoreChange, perfConfig }) => {
             const donemKey = semester === 1 ? 'donem1' : 'donem2';
@@ -712,6 +1033,56 @@
             );
         });
 
+        // Tuş Fazlalığı Olmadan Artı/Eksi Artırma ve Azaltma Satırı
+        // Normal Tık: +1 Artırır | Sağ Tık veya 0.5 sn Basılı Tutma: 1 Azaltır (Geri Alır)
+        const SmartScoreButton = ({ label, colorClass, onIncrement, onDecrement }) => {
+            const timerRef = useRef(null);
+            const longPressTriggered = useRef(false);
+
+            const handleTouchStart = () => {
+                longPressTriggered.current = false;
+                timerRef.current = setTimeout(() => {
+                    longPressTriggered.current = true;
+                    onDecrement();
+                }, 500);
+            };
+
+            const handleTouchEnd = () => {
+                if (timerRef.current) {
+                    clearTimeout(timerRef.current);
+                    timerRef.current = null;
+                }
+            };
+
+            const handleClick = () => {
+                if (longPressTriggered.current) {
+                    longPressTriggered.current = false;
+                    return;
+                }
+                onIncrement();
+            };
+
+            const handleContextMenu = (e) => {
+                e.preventDefault();
+                onDecrement();
+            };
+
+            return (
+                <button
+                    type="button"
+                    onClick={handleClick}
+                    onContextMenu={handleContextMenu}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchEnd}
+                    title="Tıkla: +1 Ekle | Sağ Tıkla veya Basılı Tut: 1 Azalt (Geri Al)"
+                    className={`w-7 h-7 rounded-full font-bold select-none transition-transform active:scale-90 ${colorClass}`}
+                >
+                    {label}
+                </button>
+            );
+        };
+
         const StudentScoreRow = memo(({ student, scores, index, onUpdateScore, onManualChange, onDelete, onOpenNotes, onOpenEdit, calculateGrade }) => {
             const calculatedGrade = calculateGrade(scores);
             return (
@@ -727,19 +1098,39 @@
                         <div className="flex justify-between items-center py-1 md:p-0 md:justify-center">
                             <span className="font-bold text-slate-400 text-sm md:hidden">Sınıf İçi:</span>
                             <div className="flex items-center gap-1.5">
-                                <button onClick={() => onUpdateScore(student.id, 'inClassPlus')} className="w-7 h-7 bg-green-500/20 text-green-300 rounded-full font-bold">+</button>
+                                <SmartScoreButton
+                                    label="+"
+                                    colorClass="bg-green-500/20 hover:bg-green-500/30 text-green-300"
+                                    onIncrement={() => onUpdateScore(student.id, 'inClassPlus', 1)}
+                                    onDecrement={() => onUpdateScore(student.id, 'inClassPlus', -1)}
+                                />
                                 <input type="number" value={scores.inClassPlus} onChange={e => onManualChange(student.id, 'inClassPlus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-green-400 py-1 ${focusClasses}`} />
                                 <input type="number" value={scores.inClassMinus} onChange={e => onManualChange(student.id, 'inClassMinus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-red-400 py-1 ${focusClasses}`} />
-                                <button onClick={() => onUpdateScore(student.id, 'inClassMinus')} className="w-7 h-7 bg-red-500/20 text-red-300 rounded-full font-bold">-</button>
+                                <SmartScoreButton
+                                    label="-"
+                                    colorClass="bg-red-500/20 hover:bg-red-500/30 text-red-300"
+                                    onIncrement={() => onUpdateScore(student.id, 'inClassMinus', 1)}
+                                    onDecrement={() => onUpdateScore(student.id, 'inClassMinus', -1)}
+                                />
                             </div>
                         </div>
                         <div className="flex justify-between items-center py-1 md:p-0 md:justify-center">
                             <span className="font-bold text-slate-400 text-sm md:hidden">Ödev:</span>
                             <div className="flex items-center gap-1.5">
-                                <button onClick={() => onUpdateScore(student.id, 'homeworkPlus')} className="w-7 h-7 bg-sky-500/20 text-sky-300 rounded-full font-bold">+</button>
+                                <SmartScoreButton
+                                    label="+"
+                                    colorClass="bg-sky-500/20 hover:bg-sky-500/30 text-sky-300"
+                                    onIncrement={() => onUpdateScore(student.id, 'homeworkPlus', 1)}
+                                    onDecrement={() => onUpdateScore(student.id, 'homeworkPlus', -1)}
+                                />
                                 <input type="number" value={scores.homeworkPlus} onChange={e => onManualChange(student.id, 'homeworkPlus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-sky-400 py-1 ${focusClasses}`} />
                                 <input type="number" value={scores.homeworkMinus} onChange={e => onManualChange(student.id, 'homeworkMinus', e.target.value)} className={`w-11 text-center bg-slate-700 rounded font-semibold text-orange-400 py-1 ${focusClasses}`} />
-                                <button onClick={() => onUpdateScore(student.id, 'homeworkMinus')} className="w-7 h-7 bg-orange-500/20 text-orange-300 rounded-full font-bold">-</button>
+                                <SmartScoreButton
+                                    label="-"
+                                    colorClass="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300"
+                                    onIncrement={() => onUpdateScore(student.id, 'homeworkMinus', 1)}
+                                    onDecrement={() => onUpdateScore(student.id, 'homeworkMinus', -1)}
+                                />
                             </div>
                         </div>
                     </div>
@@ -757,7 +1148,7 @@
             );
         });
 
-        function PerformancePanel({ user }) {
+        function PerformancePanel({ user, isLocalMode, onSwitchCloudMode }) {
             const [activeView, setActiveView] = useState('classes');
             const [classes, setClasses] = useState([]);
             const [activeClassId, setActiveClassId] = useState(null);
@@ -810,6 +1201,65 @@
                 return updated;
             };
 
+            const persistData = useCallback((newClasses, newSettings) => {
+                if (isLocalMode) {
+                    const payload = {
+                        classes: newClasses !== undefined ? newClasses : classes,
+                        settings: newSettings !== undefined ? newSettings : settings
+                    };
+                    localStorage.setItem('pp_local_user_data', JSON.stringify(payload));
+                } else if (user && db) {
+                    const updateObj = {};
+                    if (newClasses !== undefined) updateObj.classes = newClasses;
+                    if (newSettings !== undefined) updateObj.settings = newSettings;
+                    db.collection('userData').doc(user.uid).set(updateObj, { merge: true });
+                }
+            }, [isLocalMode, user, classes, settings]);
+
+            const handleExportBackupJson = () => {
+                const backupPayload = {
+                    version: '2.0',
+                    exportDate: new Date().toISOString(),
+                    settings,
+                    classes,
+                    cloudConfig: activeCloudInfo.mode === 'custom_cloud' ? activeCloudInfo.config : null
+                };
+                const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Performans_Paneli_Yedek_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportBackupJson = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const parsed = JSON.parse(ev.target.result);
+                        if (parsed && Array.isArray(parsed.classes)) {
+                            setClasses(parsed.classes);
+                            if (parsed.settings) {
+                                setSettings(parsed.settings);
+                                setTempSettings(parsed.settings);
+                            }
+                            persistData(parsed.classes, parsed.settings || settings);
+                            if (parsed.classes.length > 0) setActiveClassId(parsed.classes[0].id);
+                            alert('Yedek dosyası başarıyla yüklendi!');
+                        } else {
+                            alert('Geçersiz yedek dosyası formatı.');
+                        }
+                    } catch (err) {
+                        alert('Yedek dosyası okunamadı: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+
             useEffect(() => {
                 if (activeClass && String(activeClass.id) !== String(activeClassId)) {
                     setActiveClassId(activeClass.id);
@@ -826,81 +1276,101 @@
             }, []);
 
             useEffect(() => {
-                if (user) {
+                const processLoadedData = (data, onSaveFixed) => {
+                    const loadedSettings = {
+                        ...settings,
+                        ...(data.settings || {}),
+                        perfConfig: (data.settings && data.settings.perfConfig)
+                            ? data.settings.perfConfig
+                            : JSON.parse(JSON.stringify(DEFAULT_PERF_CONFIG))
+                    };
+                    setSettings(loadedSettings);
+                    setTempSettings(loadedSettings);
+
+                    const calcSync = (scores) => {
+                        if (!scores) return loadedSettings.baseScore;
+                        const sc = loadedSettings.baseScore +
+                            ((Number(scores.inClassPlus) || 0) * loadedSettings.inClassPlus) +
+                            ((Number(scores.inClassMinus) || 0) * loadedSettings.inClassMinus) +
+                            ((Number(scores.homeworkPlus) || 0) * loadedSettings.homeworkPlus) +
+                            ((Number(scores.homeworkMinus) || 0) * loadedSettings.homeworkMinus);
+                        return Math.max(0, Math.min(100, sc));
+                    };
+
+                    let anyNameFixed = false;
+
+                    const migratedClasses = (data.classes || []).map(cls => {
+                        const isNinth = cls.name && String(cls.name).trim().startsWith('9');
+                        const defaultCrit = isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
+                        const classCriteria = (cls.speakingCriteria && cls.speakingCriteria.length > 0) ? cls.speakingCriteria : defaultCrit;
+
+                        const migratedStudents = (cls.students || []).map(st => {
+                            const student = { ...st };
+                            if (!student.scores || !student.scores.donem1) {
+                                const oldScores = (student.scores && student.scores.inClassPlus !== undefined) ? JSON.parse(JSON.stringify(student.scores)) : { ...defaultScores };
+                                student.scores = { donem1: oldScores, donem2: { ...defaultScores } };
+                            }
+                            if (!student.assessments || !student.assessments.donem1) {
+                                student.assessments = JSON.parse(JSON.stringify(newAssessmentStructure));
+                            }
+                            if (!student.speakingExams || !student.speakingExams.donem1) {
+                                student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
+                            }
+                            if (student.schoolNumber === undefined || student.schoolNumber === null) {
+                                student.schoolNumber = '';
+                            }
+                            const cleanedName = fixSpacedTurkishName(student.name);
+                            if (cleanedName !== student.name) {
+                                student.name = cleanedName;
+                                anyNameFixed = true;
+                            }
+                            student.assessments.donem1 = syncAutoItemsInAssessment(student.assessments.donem1, calcSync(student.scores.donem1), loadedSettings.perfConfig);
+                            student.assessments.donem2 = syncAutoItemsInAssessment(student.assessments.donem2, calcSync(student.scores.donem2), loadedSettings.perfConfig);
+                            return student;
+                        });
+
+                        return {
+                            ...cls,
+                            bookTitles: cls.bookTitles || JSON.parse(JSON.stringify(newBookTitleStructure)),
+                            speakingCriteria: classCriteria,
+                            students: sortStudentsList(migratedStudents)
+                        };
+                    });
+
+                    setClasses(migratedClasses);
+                    setActiveClassId(prevId => {
+                        if (prevId && migratedClasses.some(c => String(c.id) === String(prevId))) return prevId;
+                        return migratedClasses.length > 0 ? migratedClasses[0].id : null;
+                    });
+
+                    if (anyNameFixed && onSaveFixed) {
+                        onSaveFixed(migratedClasses);
+                    }
+                };
+
+                if (isLocalMode) {
+                    setIsLoading(true);
+                    const rawLocal = localStorage.getItem('pp_local_user_data');
+                    if (rawLocal) {
+                        try {
+                            const parsed = JSON.parse(rawLocal);
+                            processLoadedData(parsed, (fixedCls) => {
+                                localStorage.setItem('pp_local_user_data', JSON.stringify({ ...parsed, classes: fixedCls }));
+                            });
+                        } catch (e) {}
+                    }
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (user && db) {
                     setIsLoading(true);
                     const docRef = db.collection('userData').doc(user.uid);
                     const unsubscribe = docRef.onSnapshot(doc => {
                         if (doc.exists) {
-                            const data = doc.data();
-                            const loadedSettings = {
-                                ...settings,
-                                ...(data.settings || {}),
-                                perfConfig: (data.settings && data.settings.perfConfig)
-                                    ? data.settings.perfConfig
-                                    : JSON.parse(JSON.stringify(DEFAULT_PERF_CONFIG))
-                            };
-                            setSettings(loadedSettings);
-                            setTempSettings(loadedSettings);
-
-                            const calcSync = (scores) => {
-                                if (!scores) return loadedSettings.baseScore;
-                                const sc = loadedSettings.baseScore +
-                                    ((Number(scores.inClassPlus) || 0) * loadedSettings.inClassPlus) +
-                                    ((Number(scores.inClassMinus) || 0) * loadedSettings.inClassMinus) +
-                                    ((Number(scores.homeworkPlus) || 0) * loadedSettings.homeworkPlus) +
-                                    ((Number(scores.homeworkMinus) || 0) * loadedSettings.homeworkMinus);
-                                return Math.max(0, Math.min(100, sc));
-                            };
-
-                            let anyNameFixed = false;
-
-                            const migratedClasses = (data.classes || []).map(cls => {
-                                const isNinth = cls.name && String(cls.name).trim().startsWith('9');
-                                const defaultCrit = isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET;
-                                const classCriteria = (cls.speakingCriteria && cls.speakingCriteria.length > 0) ? cls.speakingCriteria : defaultCrit;
-
-                                const migratedStudents = (cls.students || []).map(st => {
-                                    const student = { ...st };
-                                    if (!student.scores || !student.scores.donem1) {
-                                        const oldScores = (student.scores && student.scores.inClassPlus !== undefined) ? JSON.parse(JSON.stringify(student.scores)) : { ...defaultScores };
-                                        student.scores = { donem1: oldScores, donem2: { ...defaultScores } };
-                                    }
-                                    if (!student.assessments || !student.assessments.donem1) {
-                                        student.assessments = JSON.parse(JSON.stringify(newAssessmentStructure));
-                                    }
-                                    if (!student.speakingExams || !student.speakingExams.donem1) {
-                                        student.speakingExams = JSON.parse(JSON.stringify(newSpeakingExamStructure));
-                                    }
-                                    if (student.schoolNumber === undefined || student.schoolNumber === null) {
-                                        student.schoolNumber = '';
-                                    }
-                                    const cleanedName = fixSpacedTurkishName(student.name);
-                                    if (cleanedName !== student.name) {
-                                        student.name = cleanedName;
-                                        anyNameFixed = true;
-                                    }
-                                    student.assessments.donem1 = syncAutoItemsInAssessment(student.assessments.donem1, calcSync(student.scores.donem1), loadedSettings.perfConfig);
-                                    student.assessments.donem2 = syncAutoItemsInAssessment(student.assessments.donem2, calcSync(student.scores.donem2), loadedSettings.perfConfig);
-                                    return student;
-                                });
-
-                                return {
-                                    ...cls,
-                                    bookTitles: cls.bookTitles || JSON.parse(JSON.stringify(newBookTitleStructure)),
-                                    speakingCriteria: classCriteria,
-                                    students: sortStudentsList(migratedStudents)
-                                };
+                            processLoadedData(doc.data(), (fixedCls) => {
+                                docRef.set({ classes: fixedCls }, { merge: true });
                             });
-
-                            setClasses(migratedClasses);
-                            setActiveClassId(prevId => {
-                                if (prevId && migratedClasses.some(c => String(c.id) === String(prevId))) return prevId;
-                                return migratedClasses.length > 0 ? migratedClasses[0].id : null;
-                            });
-
-                            if (anyNameFixed) {
-                                docRef.set({ classes: migratedClasses }, { merge: true });
-                            }
                         }
                         setIsLoading(false);
                     }, err => {
@@ -909,16 +1379,16 @@
                     });
                     return () => unsubscribe();
                 }
-            }, [user]);
+            }, [user, isLocalMode]);
 
             useEffect(() => {
                 const handler = setTimeout(() => {
-                    if (!isLoading && user && activeView === 'classes') {
-                        db.collection('userData').doc(user.uid).set({ classes, settings }, { merge: true });
+                    if (!isLoading && activeView === 'classes') {
+                        persistData(classes, settings);
                     }
-                }, 1200);
+                }, 1000);
                 return () => clearTimeout(handler);
-            }, [classes, settings, user, isLoading, activeView]);
+            }, [classes, settings, isLoading, activeView, persistData]);
 
             useEffect(() => {
                 if (activeClass) {
@@ -936,7 +1406,7 @@
             const handleSaveFullSettings = (newSettingsObj) => {
                 setSettings(newSettingsObj);
                 setTempSettings(newSettingsObj);
-                db.collection('userData').doc(user.uid).set({ settings: newSettingsObj }, { merge: true });
+                persistData(classes, newSettingsObj);
                 setShowSaveConfirmation(true);
                 setTimeout(() => setShowSaveConfirmation(false), 2000);
             };
@@ -948,7 +1418,7 @@
                     students: sortStudentsList(c.students.map(s => s.id === studentId ? { ...s, schoolNumber: newNo, name: newName } : s))
                 } : c);
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
                 setEditingStudent(null);
             };
 
@@ -1099,7 +1569,7 @@
                     }
 
                     setClasses(updatedClasses);
-                    db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                    persistData(updatedClasses, settings);
                     setPdfStatusMsg(`${finalClassName} başarıyla yüklendi!`);
                     setTimeout(() => setPdfStatusMsg(''), 4000);
                 } catch (err) {
@@ -1115,14 +1585,14 @@
                 if (!activeClass) return;
                 const updatedClasses = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, speakingCriteria: newCriteriaList } : c);
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
                 setIsCriteriaModalOpen(false);
             };
 
             const handleCopyCriteriaToAllClasses = (newCriteriaList) => {
                 const updatedClasses = classes.map(c => ({ ...c, speakingCriteria: JSON.parse(JSON.stringify(newCriteriaList)) }));
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
                 setIsCriteriaModalOpen(false);
             };
 
@@ -1145,6 +1615,38 @@
                 }));
             };
 
+            const handleBatchSpeakingScoresChange = (newScoresObj) => {
+                setEvaluatingSpeaking(prev => ({
+                    ...prev,
+                    scores: { ...prev.scores, ...newScoresObj }
+                }));
+            };
+
+            // Liste ekranından doğrudan toplam konuşma sınavı notu girildiğinde kriterlere otomatik dağıtıp kaydetme
+            const handleQuickDistributeSpeakingScore = (studentId, semester, examNumber, targetScore) => {
+                if (!activeClass) return;
+                const donemKey = semester === 1 ? 'donem1' : 'donem2';
+                const sinavKey = examNumber === 1 ? 'sinav1' : 'sinav2';
+                const criteria = getClassSpeakingCriteria(activeClass);
+                const distributedScores = distributeSpeakingScoreToCriteria(targetScore, criteria);
+
+                const updatedClasses = classes.map(cls => {
+                    if (String(cls.id) !== String(activeClass.id)) return cls;
+                    return {
+                        ...cls,
+                        students: cls.students.map(s => {
+                            if (s.id !== studentId) return s;
+                            const newSpeakingExams = JSON.parse(JSON.stringify(s.speakingExams || newSpeakingExamStructure));
+                            if (!newSpeakingExams[donemKey]) newSpeakingExams[donemKey] = { sinav1: null, sinav2: null };
+                            newSpeakingExams[donemKey][sinavKey] = distributedScores;
+                            return { ...s, speakingExams: newSpeakingExams };
+                        })
+                    };
+                });
+                setClasses(updatedClasses);
+                persistData(updatedClasses, settings);
+            };
+
             const handleSaveSpeakingExam = () => {
                 if (!evaluatingSpeaking || !activeClass) return;
                 const { student, semester, examNumber, scores } = evaluatingSpeaking;
@@ -1165,7 +1667,7 @@
                 });
                 setClasses(updatedClasses);
                 setEvaluatingSpeaking(null);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
             };
 
             const handleGenerateDynamicSpeakingSummaryReport = (semester) => {
@@ -1279,8 +1781,8 @@
                 if (!activeClass || !tempClassData) return;
                 const updatedClasses = classes.map(cls => String(cls.id) === String(activeClass.id) ? tempClassData : cls);
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
-            }, [classes, activeClass, tempClassData, user]);
+                persistData(updatedClasses, settings);
+            }, [classes, activeClass, tempClassData, persistData, settings]);
 
             const handleTempScoreChange = useCallback((studentId, donem, type, value) => {
                 const newScore = value === '' ? null : Math.max(0, Math.min(100, Number(value)));
@@ -1496,7 +1998,9 @@
                     bookTitles: JSON.parse(JSON.stringify(newBookTitleStructure)),
                     speakingCriteria: isNinth ? NINTH_GRADE_SPEAKING_PRESET : DEFAULT_SPEAKING_PRESET
                 };
-                setClasses(prev => [...prev, newClass]);
+                const updated = [...classes, newClass];
+                setClasses(updated);
+                persistData(updated, settings);
                 setActiveClassId(newClass.id);
                 setNewClassName('');
             };
@@ -1516,7 +2020,9 @@
                     },
                     speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
                 };
-                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c));
+                const updated = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, newStudent]) } : c);
+                setClasses(updated);
+                persistData(updated, settings);
                 setNewStudentNumber('');
                 setNewStudentName('');
             };
@@ -1553,14 +2059,16 @@
                         speakingExams: JSON.parse(JSON.stringify(newSpeakingExamStructure))
                     };
                 });
-                setClasses(prev => prev.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c));
+                const updated = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: sortStudentsList([...c.students, ...newStudents]) } : c);
+                setClasses(updated);
+                persistData(updated, settings);
                 setListText('');
             };
 
             const confirmDeleteClass = (classId) => {
                 const updatedClasses = classes.filter(c => String(c.id) !== String(classId));
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
                 if (String(activeClassId) === String(classId)) {
                     setActiveClassId(updatedClasses[0]?.id || null);
                 }
@@ -1571,7 +2079,7 @@
                 if (!activeClass) return;
                 const updatedClasses = classes.map(c => String(c.id) === String(activeClass.id) ? { ...c, students: c.students.filter(s => s.id !== studentId) } : c);
                 setClasses(updatedClasses);
-                db.collection('userData').doc(user.uid).set({ classes: updatedClasses }, { merge: true });
+                persistData(updatedClasses, settings);
                 setStudentToDelete(null);
             };
             
@@ -1608,10 +2116,13 @@
                 }));
             }, [activeClass, activeSemester, calculateGrade, activePerfConfig]);
 
-            const updateStudentScore = useCallback((studentId, scoreType) => {
+            // Hem +1 artırma hem de sağ tık/basılı tutma ile -1 azaltma (delta: +1 veya -1)
+            const updateStudentScore = useCallback((studentId, scoreType, delta = 1) => {
                 if (!activeClass) return;
                 setUndoMessage('');
-                setLastAction({ studentId, scoreType, classId: activeClass.id, semester: activeSemester });
+                if (delta > 0) {
+                    setLastAction({ studentId, scoreType, classId: activeClass.id, semester: activeSemester });
+                }
                 const donemKey = activeSemester === 1 ? 'donem1' : 'donem2';
                 setClasses(prevClasses => prevClasses.map(c => {
                     if (String(c.id) !== String(activeClass.id)) return c;
@@ -1620,7 +2131,8 @@
                         students: c.students.map(s => {
                             if (s.id !== studentId) return s;
                             const currentScores = s.scores[donemKey] || defaultScores;
-                            const newScores = { ...currentScores, [scoreType]: (Number(currentScores[scoreType]) || 0) + 1 };
+                            const nextVal = Math.max(0, (Number(currentScores[scoreType]) || 0) + delta);
+                            const newScores = { ...currentScores, [scoreType]: nextVal };
                             const newGrade = calculateGrade(newScores);
                             const newAssessments = {
                                 ...s.assessments,
@@ -1634,10 +2146,12 @@
 
             const handleSaveNote = (studentId, newNote) => {
                 if (!activeClass) return;
-                setClasses(prev => prev.map(c => String(c.id) !== String(activeClass.id) ? c : {
+                const updated = classes.map(c => String(c.id) !== String(activeClass.id) ? c : {
                     ...c,
                     students: c.students.map(s => s.id === studentId ? { ...s, notes: newNote } : s)
-                }));
+                });
+                setClasses(updated);
+                persistData(updated, settings);
                 setEditingNoteStudent(null);
             };
             
@@ -1698,21 +2212,36 @@
             if (isLoading) return <div className="text-center text-white text-xl mt-20">Veriler Yükleniyor...</div>;
 
             const currentCriteria = getClassSpeakingCriteria(activeClass);
+            const portableKey = activeCloudInfo.config ? encodePortableCloudKey(activeCloudInfo.config) : '';
 
             return (
                 <Fragment>
                     <div className="w-full bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-2xl shadow-2xl p-4 sm:p-6 text-white pb-24">
                         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4">
                             <div>
-                                <h1 className="cool-title text-3xl font-bold">Performans Paneli</h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="cool-title text-3xl font-bold">Performans Paneli</h1>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${isLocalMode ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'}`}>
+                                        {isLocalMode ? '💻 Yerel Mod' : '☁️ Bulut Aktif'}
+                                    </span>
+                                </div>
                                 {settings.teacherName && (<div className="teacher-info mt-1 text-slate-400 text-xs sm:text-sm"><span>{settings.teacherName}</span><span className="mx-2">|</span><span>{settings.branchName}</span><span className="mx-2">|</span><span>{settings.schoolName}</span></div>)}
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                <button onClick={() => setActiveView('classes')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Sınıflar & PDF Giriş</button>
-                                <button onClick={() => setActiveView('assessments')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Performans Notları</button>
-                                <button onClick={() => setActiveView('speaking-exam')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Konuşma Sınavı</button>
-                                <button onClick={() => setActiveView('settings')} className={`py-2 px-4 rounded-lg font-semibold text-sm ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Ayarlar</button>
-                                <button onClick={() => auth.signOut()} className="py-2 px-4 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-sm">Çıkış</button>
+                                <button onClick={() => setActiveView('classes')} className={`py-2 px-3.5 rounded-lg font-semibold text-xs sm:text-sm ${activeView === 'classes' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Sınıflar & PDF</button>
+                                <button onClick={() => setActiveView('assessments')} className={`py-2 px-3.5 rounded-lg font-semibold text-xs sm:text-sm ${activeView === 'assessments' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Performans Notları</button>
+                                <button onClick={() => setActiveView('speaking-exam')} className={`py-2 px-3.5 rounded-lg font-semibold text-xs sm:text-sm ${activeView === 'speaking-exam' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Konuşma Sınavı</button>
+                                <button onClick={() => setActiveView('settings')} className={`py-2 px-3.5 rounded-lg font-semibold text-xs sm:text-sm ${activeView === 'settings' ? 'bg-blue-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}>Ayarlar & Bulut</button>
+                                <button onClick={handleExportBackupJson} className="py-2 px-3 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm" title="Tüm verilerinizi başka cihazda açmak veya Google Drive'a kaydetmek için indirin">💾 Yedek İndir</button>
+                                <label className="py-2 px-3 rounded-lg bg-amber-600/80 hover:bg-amber-600 text-white font-semibold text-xs sm:text-sm cursor-pointer" title="İndirdiğiniz yedek dosyasını geri yükleyin">
+                                    📂 Yedek Yükle
+                                    <input type="file" accept=".json,application/json" onChange={handleImportBackupJson} className="hidden" />
+                                </label>
+                                {!isLocalMode ? (
+                                    <button onClick={() => auth && auth.signOut()} className="py-2 px-3.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-xs sm:text-sm">Çıkış</button>
+                                ) : (
+                                    <button onClick={onSwitchCloudMode} className="py-2 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm">☁️ Bulut Bağla</button>
+                                )}
                             </div>
                         </div>
 
@@ -1735,8 +2264,20 @@
                                             <div><label className="block text-xs text-slate-400">Ödev Eksisi (-)</label><input type="number" value={tempSettings.homeworkMinus} onChange={e => setTempSettings({ ...tempSettings, homeworkMinus: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
                                         </div>
                                         <div className="space-y-3">
-                                            <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-2">Başlangıç Notu</h3>
+                                            <h3 className="font-bold text-blue-400 border-b border-slate-700 pb-2">Başlangıç Notu & Cihazlar Arası Erişim</h3>
                                             <div><label className="block text-xs text-slate-400">Sözlü Başlangıç Puanı</label><input type="number" value={tempSettings.baseScore} onChange={e => setTempSettings({ ...tempSettings, baseScore: Number(e.target.value) })} className="w-full mt-1 p-2 bg-slate-700 rounded text-white text-sm" /></div>
+                                            {activeCloudInfo.mode === 'custom_cloud' && portableKey && (
+                                                <div className="pt-2">
+                                                    <label className="block text-xs text-emerald-400 font-semibold">🔑 Taşınabilir Bulut Anahtarınız (Diğer Cihazlar İçin):</label>
+                                                    <input type="text" readOnly value={portableKey} onClick={e => e.target.select()} className="w-full mt-1 p-1.5 bg-slate-800 border border-emerald-500/40 rounded text-[11px] text-emerald-300 font-mono" />
+                                                    <p className="text-[10px] text-slate-400 mt-1">Bu kodu telefon veya başka bilgisayarda kurulum ekranına yapıştırarak aynı buluta bağlanabilirsiniz.</p>
+                                                </div>
+                                            )}
+                                            <div className="pt-2">
+                                                <button type="button" onClick={onSwitchCloudMode} className="w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 text-amber-300 rounded text-xs font-semibold">
+                                                    ☁️ Bulut Bağlantısını Değiştir / Yapılandır
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1770,7 +2311,7 @@
                                 </div>
                                 {activeClass ? (
                                     <div>
-                                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4 mb-5">
+                                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-700 pb-4 mb-4">
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 1 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>1. Dönem</button>
                                                 <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-lg text-sm ${activeSemester === 2 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>2. Dönem</button>
@@ -1781,6 +2322,10 @@
                                                 <button onClick={() => handleGenerateDynamicSpeakingDetailedReport(activeSemester)} disabled={isGeneratingPdf} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm">📥 Bireysel Detay Raporu (PDF)</button>
                                             </div>
                                         </div>
+
+                                        <p className="text-xs text-slate-400 mb-4 bg-slate-900/50 p-2.5 rounded-lg border border-slate-700/60">
+                                            💡 <b>İpucu:</b> Kutucuğa doğrudan toplam notu (örn: <b>85</b>) yazıp <b>Enter</b>'a basarsanız puanlar kriterlere otomatik dağıtılır. Detaylı görmek veya tek tek seçmek için <b>"Puanla"</b> butonuna tıklayın.
+                                        </p>
 
                                         <div className="space-y-2.5">
                                             {activeClass.students.map((student, index) => {
@@ -1797,12 +2342,20 @@
                                                             <span>{student.name}</span>
                                                         </div>
                                                         <div className="flex flex-wrap gap-3">
-                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
-                                                                <span className="text-xs text-slate-300">1. Sınav: <b className="text-amber-400 text-base ml-1">{total1}</b></span>
+                                                            <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">1. Sınav:</span>
+                                                                <QuickSpeakingScoreInput
+                                                                    totalScore={total1}
+                                                                    onQuickDistribute={(val) => handleQuickDistributeSpeakingScore(student.id, activeSemester, 1, val)}
+                                                                />
                                                                 <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 1)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-3 rounded">Puanla</button>
                                                             </div>
-                                                            <div className="flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
-                                                                <span className="text-xs text-slate-300">2. Sınav: <b className="text-amber-400 text-base ml-1">{total2}</b></span>
+                                                            <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-700">
+                                                                <span className="text-xs text-slate-300">2. Sınav:</span>
+                                                                <QuickSpeakingScoreInput
+                                                                    totalScore={total2}
+                                                                    onQuickDistribute={(val) => handleQuickDistributeSpeakingScore(student.id, activeSemester, 2, val)}
+                                                                />
                                                                 <button onClick={() => handleOpenSpeakingModal(student, activeSemester, 2)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1 px-3 rounded">Puanla</button>
                                                             </div>
                                                         </div>
@@ -1927,13 +2480,17 @@
                                         </div>
                                     ) : (
                                         <div>
-                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-4">
+                                            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-3">
                                                 <div className="flex border-b border-slate-700">
                                                     <button onClick={() => setActiveSemester(1)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 1 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>1. Dönem</button>
                                                     <button onClick={() => setActiveSemester(2)} className={`py-2 px-4 font-semibold rounded-t-lg text-sm ${activeSemester === 2 ? 'bg-slate-800 border-b-2 border-blue-500 text-white' : 'text-slate-400'}`}>2. Dönem</button>
                                                 </div>
                                                 <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Öğrenci ara..." className={`sm:w-72 p-2 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white ${focusClasses}`} />
                                             </div>
+
+                                            <p className="text-xs text-slate-400 mb-3 bg-slate-900/40 p-2 rounded border border-slate-700/50">
+                                                💡 <b>Pratik Kullanım:</b> <b>+</b> veya <b>-</b> tuşlarına normal tıklamak sayıyı <b>1 artırır</b>; aynı tuşa <b>sağ tıklamak</b> (mobil/tahtada <b>basılı tutmak</b>) sayıyı <b>1 azaltır (geri alır)</b>.
+                                            </p>
 
                                             <div className="hidden md:grid grid-cols-12 gap-4 font-bold text-slate-400 text-xs p-2 border-b border-slate-700 mb-2">
                                                 <div className="col-span-4">Öğrenci (Okul No - Ad Soyad)</div>
@@ -1971,7 +2528,7 @@
                                             </div>
                                             <div className="flex flex-wrap justify-end items-center mt-6 gap-3">
                                                 {undoMessage && <span className="text-green-400 text-xs font-semibold">{undoMessage}</span>}
-                                                <button onClick={handleUndoLastAction} disabled={!lastAction} className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-sm disabled:opacity-50">Geri Al</button>
+                                                <button onClick={handleUndoLastAction} disabled={!lastAction} className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-sm disabled:opacity-50">Son İşlemi Geri Al</button>
                                                 <button onClick={handleGenerateSimplePdf} disabled={isGeneratingPdf} className="py-2 px-4 bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-lg text-sm">Basit Rapor</button>
                                                 <button onClick={handleGeneratePlusMinusReport} disabled={isGeneratingPdf} className="py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-sm">Artı/Eksi Raporu</button>
                                                 <button onClick={handleGenerateDetailedPdf} disabled={isGeneratingPdf} className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm">Detaylı Rapor</button>
@@ -1983,7 +2540,6 @@
                         )}
                     </div>
 
-                    {/* Performans Notları Sekmesinden Hızlı Kalem & Yüzde Düzenleme Modalı */}
                     {isPerfConfigModalOpen && (
                         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 fade-in">
                             <div className="bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl flex flex-col max-h-[90vh]">
@@ -2031,6 +2587,7 @@
                             examNumber={evaluatingSpeaking.examNumber}
                             className={activeClass?.name}
                             onScoreChange={handleSpeakingScoreChange}
+                            onBatchScoresChange={handleBatchSpeakingScoresChange}
                             onSave={handleSaveSpeakingExam}
                             onClose={() => setEvaluatingSpeaking(null)}
                         />
@@ -2083,8 +2640,13 @@
         function App() {
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
+            const [showSetup, setShowSetup] = useState(activeCloudInfo.mode === 'needs_setup');
 
             useEffect(() => {
+                if (activeCloudInfo.mode === 'local' || activeCloudInfo.mode === 'needs_setup' || !auth) {
+                    setLoading(false);
+                    return;
+                }
                 const unsubscribe = auth.onAuthStateChanged(u => {
                     setUser(u);
                     setLoading(false);
@@ -2092,10 +2654,38 @@
                 return () => unsubscribe();
             }, []);
 
+            const handleOpenCloudSetup = () => {
+                localStorage.setItem('pp_storage_mode', 'setup_new');
+                setShowSetup(true);
+            };
+
+            const handleBackToOwner = () => {
+                localStorage.removeItem('pp_custom_firebase_config');
+                localStorage.removeItem('pp_storage_mode');
+                window.location.reload();
+            };
+
             if (loading) return <div className="text-center text-white text-xl mt-20">Yükleniyor...</div>;
+
+            if (showSetup) {
+                return (
+                    <ErrorBoundary>
+                        <CloudSetupScreen onBackToOwner={handleBackToOwner} />
+                    </ErrorBoundary>
+                );
+            }
+
+            if (activeCloudInfo.mode === 'local') {
+                return (
+                    <ErrorBoundary>
+                        <PerformancePanel user={{ uid: 'local_user' }} isLocalMode={true} onSwitchCloudMode={handleOpenCloudSetup} />
+                    </ErrorBoundary>
+                );
+            }
+
             return (
                 <ErrorBoundary>
-                    {user ? <PerformancePanel user={user} /> : <AuthScreen />}
+                    {user ? <PerformancePanel user={user} isLocalMode={false} onSwitchCloudMode={handleOpenCloudSetup} /> : <AuthScreen onOpenCloudSetup={handleOpenCloudSetup} />}
                 </ErrorBoundary>
             );
         }
