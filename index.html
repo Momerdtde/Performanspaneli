@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performans Paneli</title>
     <meta name="theme-color" content="#1e293b">
+    <script>
+        // Mac Trackpad ve fare tekerleği ile kaydırma yaparken notların kazara değişmesini engeller
+        window.addEventListener('wheel', function(e) {
+            if (document.activeElement && document.activeElement.type === 'number') {
+                document.activeElement.blur();
+            }
+            if (e.target && e.target.type === 'number') {
+                e.target.blur();
+            }
+        }, { capture: true, passive: true });
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
@@ -117,7 +128,6 @@
             return activeWeightTotal === 0 ? null : Math.round(weightedSum / activeWeightTotal);
         };
 
-        // Yazılı (%70) + Dinleme (%15) + Konuşma (%15) Hesaplayıcı
         const calculateCombinedExamGrade = (yazili, dinleme, konusma) => {
             const hasY = yazili !== null && yazili !== undefined && yazili !== '' && !isNaN(yazili);
             const hasD = dinleme !== null && dinleme !== undefined && dinleme !== '' && !isNaN(dinleme);
@@ -672,7 +682,6 @@
             );
         };
 
-        // YENİ SEKME KARTI: Yazılı (%70) + Dinleme (%15) + Konuşma (%15)
         const StudentExam701515Card = memo(({ student, index, semester, criteria, onExamPartChange, onSpeakingScoreChange, onOpenSpeakingModal }) => {
             const donemKey = semester === 1 ? 'donem1' : 'donem2';
             const wExams = student.writtenExams?.[donemKey] || { sinav1: { yazili: null, dinleme: null }, sinav2: { yazili: null, dinleme: null } };
@@ -728,7 +737,6 @@
                         )}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* 1. SINAV KUTUSU */}
                         <div className="space-y-2.5 p-3.5 bg-slate-900/50 rounded-lg border border-slate-700/60">
                             <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
                                 <span className="font-bold text-sky-400">1. Sınav Puanı (e-Okul)</span>
@@ -756,7 +764,6 @@
                             </div>
                         </div>
 
-                        {/* 2. SINAV KUTUSU */}
                         <div className="space-y-2.5 p-3.5 bg-slate-900/50 rounded-lg border border-slate-700/60">
                             <div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
                                 <span className="font-bold text-orange-400">2. Sınav Puanı (e-Okul)</span>
@@ -979,7 +986,6 @@
             const activeClass = classes.find(c => String(c.id) === String(activeClassId)) || (classes.length > 0 ? classes[0] : null);
             const activePerfConfig = settings.perfConfig || DEFAULT_PERF_CONFIG;
 
-            // Ortak PDF Üretici Yardımcı Fonksiyon
             const exportHtmlToPdf = (htmlContent, fileName, orientation = 'portrait') => {
                 const isLandscape = orientation === 'landscape';
                 const widthMm = isLandscape ? 297 : 210;
@@ -1173,7 +1179,6 @@
                 setEditingStudent(null);
             };
 
-            // Yazılı (%70) ve Dinleme (%15) Notu Kaydetme
             const handleExamPartChange = useCallback((studentId, donemKey, sinavKey, field, rawVal) => {
                 if (!activeClass) return;
                 const scoreVal = rawVal === '' ? null : Math.max(0, Math.min(100, Number(rawVal)));
@@ -1195,7 +1200,6 @@
                 persistData(updatedClasses, settings);
             }, [activeClass, classes, persistData, settings]);
 
-            // 70-15-15 Sınav Çizelgesi PDF Raporu
             const handleGenerateExam701515Report = (semester) => {
                 if (!activeClass) return;
                 setIsGeneratingPdf(true);
@@ -1978,7 +1982,6 @@
                             </div>
                         </div>
 
-                        {/* YENİ SEKME: SINAVLAR (%70 YAZILI + %15 DİNLEME + %15 KONUŞMA) */}
                         {activeView === 'exams-701515' && (
                             <div className="fade-in">
                                 <div className="flex flex-wrap gap-2 border-b border-slate-700 pb-4 mb-6">
